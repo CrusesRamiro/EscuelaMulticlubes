@@ -8,7 +8,44 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/umd/lucide.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: system-ui, -apple-system, sans-serif; }
+        .container { max-width: 48rem; margin: 0 auto; padding: 1rem; min-height: 100vh; background: linear-gradient(to bottom right, #eff6ff, #e0e7ff); }
+        .card { background: white; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+        .card-padding { padding: 1.5rem; }
+        .header { text-align: center; margin-bottom: 1.5rem; }
+        .title { font-size: 1.875rem; font-weight: bold; color: #312e81; }
+        .subtitle { color: #4b5563; margin-top: 0.5rem; }
+        .tabs { display: flex; border-bottom: 1px solid #e5e7eb; }
+        .tab { flex: 1; padding: 1rem 1.5rem; font-weight: 600; background: #f3f4f6; color: #4b5563; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: all 0.2s; }
+        .tab:hover { background: #e5e7eb; }
+        .tab.active { background: #4f46e5; color: white; }
+        .form-group { margin-bottom: 1rem; }
+        .label { display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem; }
+        .input, .select { width: 100%; padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem; }
+        .input:focus, .select:focus { outline: none; border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79,70,229,0.1); }
+        .checkbox-group { display: flex; align-items: center; gap: 0.5rem; }
+        .checkbox { width: 1rem; height: 1rem; }
+        .btn { width: 100%; padding: 0.75rem; border-radius: 0.5rem; font-weight: 600; border: none; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+        .btn-primary { background: #4f46e5; color: white; }
+        .btn-primary:hover:not(:disabled) { background: #4338ca; }
+        .btn-success { background: #059669; color: white; }
+        .btn-success:hover:not(:disabled) { background: #047857; }
+        .btn-danger { background: #dc2626; color: white; }
+        .btn-danger:hover:not(:disabled) { background: #b91c1c; }
+        .btn:disabled { background: #9ca3af; cursor: not-allowed; }
+        .alert { padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+        .alert-success { background: #d1fae5; color: #065f46; }
+        .alert-error { background: #fee2e2; color: #991b1b; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .space-y { margin-top: 1rem; }
+        .border-t { border-top: 1px solid #e5e7eb; padding-top: 1rem; margin-top: 1rem; }
+        .info-box { background: #eef2ff; padding: 1rem; border-radius: 0.5rem; }
+        .info-text { font-size: 0.875rem; color: #312e81; font-weight: 500; }
+        h3 { font-weight: 600; color: #111827; margin-bottom: 0.75rem; }
+        @media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } }
+    </style>
 </head>
 <body>
     <div id="root"></div>
@@ -164,198 +201,108 @@
           };
 
           return (
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-              <div className="max-w-2xl mx-auto">
-                {/* Header */}
-                <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-                  <h1 className="text-3xl font-bold text-indigo-900 text-center">🏒 Club de Hockey</h1>
-                  <p className="text-gray-600 text-center mt-2">Sistema de Registro y Asistencia</p>
+            <div className="container">
+              <div className="card header card-padding">
+                <h1 className="title">🏒 Club de Hockey</h1>
+                <p className="subtitle">Sistema de Registro y Asistencia</p>
+              </div>
+
+              {message.text && (
+                <div className={`alert ${message.type === 'success' ? 'alert-success' : 'alert-error'}`}>
+                  {message.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+                  {message.text}
+                </div>
+              )}
+
+              <div className="card">
+                <div className="tabs">
+                  <button onClick={() => setActiveTab('register')} className={`tab ${activeTab === 'register' ? 'active' : ''}`}>
+                    <Users size={20} />
+                    Registrar Alumno
+                  </button>
+                  <button onClick={() => setActiveTab('attendance')} className={`tab ${activeTab === 'attendance' ? 'active' : ''}`}>
+                    <ClipboardCheck size={20} />
+                    Marcar Asistencia
+                  </button>
                 </div>
 
-                {/* Message Alert */}
-                {message.text && (
-                  <div className={`mb-4 p-4 rounded-lg flex items-center gap-2 ${
-                    message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}>
-                    {message.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
-                    {message.text}
+                {activeTab === 'register' && (
+                  <div className="card-padding">
+                    <div className="form-group">
+                      <label className="label">DNI del Alumno</label>
+                      <input type="number" name="dni" value={formData.dni} onChange={handleInputChange} className="input" required />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="label">Nombre Completo</label>
+                      <input type="text" name="nombre_completo" value={formData.nombre_completo} onChange={handleInputChange} className="input" required />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="label">Fecha de Nacimiento</label>
+                      <input type="date" name="fecha_nac" value={formData.fecha_nac} onChange={handleInputChange} className="input" required />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="label">Club</label>
+                      <input type="text" name="club" value={formData.club} onChange={handleInputChange} className="input" />
+                    </div>
+
+                    <div className="form-group checkbox-group">
+                      <input type="checkbox" name="equipacion" checked={formData.equipacion} onChange={handleInputChange} className="checkbox" />
+                      <label className="label">Tiene equipación</label>
+                    </div>
+
+                    <div className="border-t">
+                      <h3>Datos del Adulto Responsable</h3>
+                      
+                      <div className="form-group">
+                        <label className="label">Nombre</label>
+                        <input type="text" name="nombre_adulto" value={formData.nombre_adulto} onChange={handleInputChange} className="input" required />
+                      </div>
+
+                      <div className="form-group">
+                        <label className="label">Teléfono</label>
+                        <input type="number" name="telefono_adulto" value={formData.telefono_adulto} onChange={handleInputChange} className="input" required />
+                      </div>
+                    </div>
+
+                    <button onClick={handleRegister} disabled={loading} className="btn btn-primary">
+                      {loading ? 'Registrando...' : 'Registrar Alumno'}
+                    </button>
                   </div>
                 )}
 
-                {/* Tabs */}
-                <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-                  <div className="flex border-b">
-                    <button
-                      onClick={() => setActiveTab('register')}
-                      className={`flex-1 py-4 px-6 font-semibold flex items-center justify-center gap-2 transition-colors ${
-                        activeTab === 'register'
-                          ? 'bg-indigo-600 text-white'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      <Users size={20} />
-                      Registrar Alumno
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('attendance')}
-                      className={`flex-1 py-4 px-6 font-semibold flex items-center justify-center gap-2 transition-colors ${
-                        activeTab === 'attendance'
-                          ? 'bg-indigo-600 text-white'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      <ClipboardCheck size={20} />
-                      Marcar Asistencia
-                    </button>
-                  </div>
+                {activeTab === 'attendance' && (
+                  <div className="card-padding">
+                    <div className="info-box">
+                      <p className="info-text">
+                        Próxima sesión: <strong>{new Date(nextSessionDate).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</strong>
+                      </p>
+                    </div>
 
-                  {/* Register Tab */}
-                  {activeTab === 'register' && (
-                    <div className="p-6 space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">DNI del Alumno</label>
-                        <input
-                          type="number"
-                          name="dni"
-                          value={formData.dni}
-                          onChange={handleInputChange}
-                          required
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                        />
-                      </div>
+                    <div className="form-group space-y">
+                      <label className="label">Selecciona al alumno</label>
+                      <select value={selectedAlumno} onChange={(e) => setSelectedAlumno(e.target.value)} className="select">
+                        <option value="">-- Selecciona un alumno --</option>
+                        {alumnos.map((alumno) => (
+                          <option key={alumno.dni} value={alumno.dni}>{alumno.nombre_completo}</option>
+                        ))}
+                      </select>
+                    </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Nombre Completo</label>
-                        <input
-                          type="text"
-                          name="nombre_completo"
-                          value={formData.nombre_completo}
-                          onChange={handleInputChange}
-                          required
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Nacimiento</label>
-                        <input
-                          type="date"
-                          name="fecha_nac"
-                          value={formData.fecha_nac}
-                          onChange={handleInputChange}
-                          required
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Club</label>
-                        <input
-                          type="text"
-                          name="club"
-                          value={formData.club}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                        />
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          name="equipacion"
-                          checked={formData.equipacion}
-                          onChange={handleInputChange}
-                          className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
-                        />
-                        <label className="text-sm font-medium text-gray-700">Tiene equipación</label>
-                      </div>
-
-                      <div className="border-t pt-4 mt-4">
-                        <h3 className="font-semibold text-gray-900 mb-3">Datos del Adulto Responsable</h3>
-                        
-                        <div className="space-y-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
-                            <input
-                              type="text"
-                              name="nombre_adulto"
-                              value={formData.nombre_adulto}
-                              onChange={handleInputChange}
-                              required
-                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
-                            <input
-                              type="number"
-                              name="telefono_adulto"
-                              value={formData.telefono_adulto}
-                              onChange={handleInputChange}
-                              required
-                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={handleRegister}
-                        disabled={loading}
-                        className="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-                      >
-                        {loading ? 'Registrando...' : 'Registrar Alumno'}
+                    <div className="grid-2 space-y">
+                      <button onClick={() => handleAttendance('si')} disabled={loading || !selectedAlumno} className="btn btn-success">
+                        <CheckCircle size={24} />
+                        Sí Asiste
+                      </button>
+                      <button onClick={() => handleAttendance('no')} disabled={loading || !selectedAlumno} className="btn btn-danger">
+                        <AlertCircle size={24} />
+                        No Asiste
                       </button>
                     </div>
-                  )}
-
-                  {/* Attendance Tab */}
-                  {activeTab === 'attendance' && (
-                    <div className="p-6 space-y-6">
-                      <div className="bg-indigo-50 p-4 rounded-lg">
-                        <p className="text-sm text-indigo-900 font-medium">
-                          Próxima sesión: <span className="font-bold">{new Date(nextSessionDate).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
-                        </p>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Selecciona al alumno</label>
-                        <select
-                          value={selectedAlumno}
-                          onChange={(e) => setSelectedAlumno(e.target.value)}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-lg"
-                        >
-                          <option value="">-- Selecciona un alumno --</option>
-                          {alumnos.map((alumno) => (
-                            <option key={alumno.dni} value={alumno.dni}>
-                              {alumno.nombre_completo}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <button
-                          onClick={() => handleAttendance('si')}
-                          disabled={loading || !selectedAlumno}
-                          className="bg-green-600 text-white py-4 rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                        >
-                          <CheckCircle size={24} />
-                          Sí Asiste
-                        </button>
-                        <button
-                          onClick={() => handleAttendance('no')}
-                          disabled={loading || !selectedAlumno}
-                          className="bg-red-600 text-white py-4 rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                        >
-                          <AlertCircle size={24} />
-                          No Asiste
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           );
