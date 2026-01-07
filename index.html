@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Asistencia Club</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    ul { list-style: none; padding: 0; }
+    li { padding: 6px; cursor: pointer; border-bottom: 1px solid #ccc; }
+    li:hover { background: #eee; }
+  </style>
+</head>
+<body>
+
+<h2>Tomar asistencia</h2>
+
+<input
+  type="text"
+  id="busqueda"
+  placeholder="Escribí el nombre del chico"
+  autocomplete="off"
+/>
+
+<ul id="resultados"></ul>
+
+<button id="presente" disabled>Marcar presente</button>
+
+<script>
+  const SUPABASE_URL = "https://TU_PROYECTO.supabase.co";
+  const SUPABASE_KEY = "TU_ANON_KEY";
+
+  let alumnoSeleccionado = null;
+
+  const input = document.getElementById("busqueda");
+  const lista = document.getElementById("resultados");
+  const btn = document.getElementById("presente");
+
+  input.addEventListener("input", async () => {
+    const texto = input.value.trim();
+    lista.innerHTML = "";
+    alumnoSeleccionado = null;
+    btn.disabled = true;
+
+    if (texto.length < 2) return;
+
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/alumnos?nombre=ilike.%${texto}%&select=id,nombre,apellido,categoria`,
+      {
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: `Bearer ${SUPABASE_KEY}`
+        }
+      }
+    );
+
+    const data = await res.json();
+
+    data.forEach(a => {
+      const li = document.createElement("li");
+      li.textContent = `${a.nombre} ${a.apellido} (${a.categoria})`;
+      li.onclick = () => {
+        alumnoSeleccionado = a;
+        input.value = li.textContent;
+        lista.innerHTML = "";
+        btn.disabled = false;
+      };
+      lista.appendChild(li);
+    });
+  });
+
+  btn.addEventListener("click", async () => {
+    if (!alumnoSeleccionado) return;
+
+    await fetch(`${SUPABASE_URL}/rest/v1/asistencia`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal"
+      },
+      body: JSON.stringify({
+        alumno_id: alumnoSeleccionado.id,
+        fecha: new Date().toISOString().slice(0, 10),
+        presente: true
+      })
+    });
+
+    alert("Asistencia registrada");
+    input.value = "";
+    btn.disabled = true;
+  });
+</script>
+
+</body>
+</html>
