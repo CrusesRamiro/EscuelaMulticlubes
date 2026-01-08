@@ -139,14 +139,14 @@
               fetchAlumnos();
               setNextSessionDate(getNextSaturday());
             }
-            if (activeTab === 'admin' && isAdminAuthenticated) {
-              if (!alumnos.length) fetchAlumnos();
-              if (!nextSessionDate) setNextSessionDate(getNextSaturday());
+            if (activeTab === 'admin') {
+              fetchAlumnos();
+              setNextSessionDate(getNextSaturday());
               if (adminView === 'attendance') {
                 fetchNextSessionAttendance();
               }
             }
-          }, [activeTab, isAdminAuthenticated, adminView]);
+          }, [activeTab, adminView]);
 
           const getNextSaturday = () => {
             const today = new Date();
