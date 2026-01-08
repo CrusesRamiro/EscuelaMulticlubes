@@ -140,8 +140,8 @@
               setNextSessionDate(getNextSaturday());
             }
             if (activeTab === 'admin' && isAdminAuthenticated) {
-              fetchAlumnos();
-              setNextSessionDate(getNextSaturday());
+              if (!alumnos.length) fetchAlumnos();
+              if (!nextSessionDate) setNextSessionDate(getNextSaturday());
               if (adminView === 'attendance') {
                 fetchNextSessionAttendance();
               }
