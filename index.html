@@ -414,15 +414,20 @@
                             <thead>
                               <tr>
                                 <th>Alumno</th>
+                                <th>Edad</th>
+                                <th>Equipación</th>
                                 <th>Estado</th>
                               </tr>
                             </thead>
                             <tbody>
                               {alumnos.length > 0 ? alumnos.map((alumno) => {
                                 const status = getAttendanceForAlumno(alumno.dni);
+                                const age = alumno.fecha_nac ? Math.floor((new Date() - new Date(alumno.fecha_nac)) / (1000 * 60 * 60 * 24 * 365.25)) : '-';
                                 return (
                                   <tr key={alumno.dni}>
                                     <td>{alumno.nombre_completo}</td>
+                                    <td>{age}</td>
+                                    <td>{alumno.equipacion ? '✓' : '✗'}</td>
                                     <td>
                                       {status === 'si' && <span className="badge badge-success">Asiste</span>}
                                       {status === 'no' && <span className="badge badge-danger">No Asiste</span>}
@@ -431,7 +436,7 @@
                                   </tr>
                                 );
                               }) : (
-                                <tr><td colSpan="2">No hay alumnos registrados</td></tr>
+                                <tr><td colSpan="4">No hay alumnos registrados</td></tr>
                               )}
                             </tbody>
                           </table>
