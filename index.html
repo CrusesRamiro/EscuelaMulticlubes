@@ -54,8 +54,6 @@
         .badge-success { background: #d1fae5; color: #065f46; }
         .badge-danger { background: #fee2e2; color: #991b1b; }
         .badge-warning { background: #fef3c7; color: #92400e; }
-        .logout-btn { padding: 0.5rem 1rem; background: #ef4444; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem; font-weight: 500; margin-bottom: 1rem; }
-        .logout-btn:hover { background: #dc2626; }
         @media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -114,12 +112,9 @@
           const [alumnos, setAlumnos] = useState([]);
           const [message, setMessage] = useState({ type: '', text: '' });
           const [loading, setLoading] = useState(false);
-          const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
-          const [adminPassword, setAdminPassword] = useState('');
-          const [adminView, setAdminView] = useState('attendance'); // 'attendance' or 'all'
+          const [adminView, setAdminView] = useState('attendance');
           const [nextSessionAttendance, setNextSessionAttendance] = useState([]);
 
-          // Registration form state
           const [formData, setFormData] = useState({
             dni: '',
             nombre_completo: '',
@@ -130,7 +125,6 @@
             telefono_adulto: ''
           });
 
-          // Attendance state
           const [selectedAlumno, setSelectedAlumno] = useState('');
           const [nextSessionDate, setNextSessionDate] = useState('');
 
@@ -281,23 +275,6 @@
             }
           };
 
-          const handleAdminLogin = (e) => {
-            e.preventDefault();
-            if (adminPassword === 'admin123') {
-              setIsAdminAuthenticated(true);
-              showMessage('success', 'Acceso concedido');
-              setAdminPassword('');
-            } else {
-              showMessage('error', 'Contraseña incorrecta');
-            }
-          };
-
-          const handleAdminLogout = () => {
-            setIsAdminAuthenticated(false);
-            setAdminPassword('');
-            setActiveTab('register');
-          };
-
           const getAttendanceForAlumno = (dni) => {
             const attendance = nextSessionAttendance.find(a => a.alumno_dni === dni);
             return attendance ? attendance.presente : 'No confirmado';
@@ -306,11 +283,11 @@
           return (
             <div className="container">
               <div className="card header card-padding">
-                <h1 className="title">🏒 Escuela Multi Clubes</h1>
+                <h1 className="title">🏒 Club de Hockey</h1>
                 <p className="subtitle">Sistema de Registro y Asistencia</p>
               </div>
 
-                              {message.text && (
+              {message.text && (
                 <div className={`alert ${message.type === 'success' ? 'alert-success' : 'alert-error'}`}>
                   {message.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
                   <span>{message.text}</span>
@@ -321,11 +298,11 @@
                 <div className="tabs">
                   <button onClick={() => setActiveTab('register')} className={`tab ${activeTab === 'register' ? 'active' : ''}`}>
                     <Users />
-                    <span>Registrar Alumno</span>
+                    <span>Registrar</span>
                   </button>
                   <button onClick={() => setActiveTab('attendance')} className={`tab ${activeTab === 'attendance' ? 'active' : ''}`}>
                     <ClipboardCheck />
-                    <span>Marcar Asistencia</span>
+                    <span>Asistencia</span>
                   </button>
                   <button onClick={() => setActiveTab('admin')} className={`tab ${activeTab === 'admin' ? 'active' : ''}`}>
                     <Lock />
@@ -401,13 +378,99 @@
                     <div className="grid-2 space-y">
                       <button onClick={() => handleAttendance('si')} disabled={loading || !selectedAlumno} className="btn btn-success">
                         <CheckCircle size={24} />
-                        Sí Asiste
+                        <span>Sí Asiste</span>
                       </button>
                       <button onClick={() => handleAttendance('no')} disabled={loading || !selectedAlumno} className="btn btn-danger">
                         <AlertCircle size={24} />
-                        No Asiste
+                        <span>No Asiste</span>
                       </button>
                     </div>
+                  </div>
+                )}
+
+                {activeTab === 'admin' && (
+                  <div className="card-padding">
+                    <h3>Panel de Profesores</h3>
+                    
+                    <div className="admin-tabs">
+                      <button onClick={() => setAdminView('attendance')} className={adminView === 'attendance' ? 'admin-tab active' : 'admin-tab'}>
+                        Próxima Clase
+                      </button>
+                      <button onClick={() => setAdminView('all')} className={adminView === 'all' ? 'admin-tab active' : 'admin-tab'}>
+                        Todos
+                      </button>
+                    </div>
+
+                    {adminView === 'attendance' && (
+                      <div>
+                        <div className="info-box">
+                          <p className="info-text">
+                            Próxima sesión: <strong>{nextSessionDate && new Date(nextSessionDate).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</strong>
+                          </p>
+                        </div>
+
+                        <div className="table-container space-y">
+                          <table className="table">
+                            <thead>
+                              <tr>
+                                <th>Alumno</th>
+                                <th>Estado</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {alumnos.length > 0 ? alumnos.map((alumno) => {
+                                const status = getAttendanceForAlumno(alumno.dni);
+                                return (
+                                  <tr key={alumno.dni}>
+                                    <td>{alumno.nombre_completo}</td>
+                                    <td>
+                                      {status === 'si' && <span className="badge badge-success">Asiste</span>}
+                                      {status === 'no' && <span className="badge badge-danger">No Asiste</span>}
+                                      {status === 'No confirmado' && <span className="badge badge-warning">Sin confirmar</span>}
+                                    </td>
+                                  </tr>
+                                );
+                              }) : (
+                                <tr><td colSpan="2">No hay alumnos registrados</td></tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+
+                    {adminView === 'all' && (
+                      <div className="table-container space-y">
+                        <table className="table">
+                          <thead>
+                            <tr>
+                              <th>DNI</th>
+                              <th>Nombre</th>
+                              <th>Fecha Nac.</th>
+                              <th>Club</th>
+                              <th>Equip.</th>
+                              <th>Adulto</th>
+                              <th>Teléfono</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {alumnos.length > 0 ? alumnos.map((alumno) => (
+                              <tr key={alumno.dni}>
+                                <td>{alumno.dni}</td>
+                                <td>{alumno.nombre_completo}</td>
+                                <td>{alumno.fecha_nac && new Date(alumno.fecha_nac).toLocaleDateString('es-ES')}</td>
+                                <td>{alumno.club || '-'}</td>
+                                <td>{alumno.equipacion ? '✓' : '✗'}</td>
+                                <td>{alumno.nombre_adulto}</td>
+                                <td>{alumno.telefono_adulto}</td>
+                              </tr>
+                            )) : (
+                              <tr><td colSpan="7">No hay alumnos registrados</td></tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
