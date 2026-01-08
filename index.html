@@ -112,6 +112,9 @@
           const [alumnos, setAlumnos] = useState([]);
           const [message, setMessage] = useState({ type: '', text: '' });
           const [loading, setLoading] = useState(false);
+          const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+          const [adminUsername, setAdminUsername] = useState('');
+          const [adminPassword, setAdminPassword] = useState('');
           const [adminView, setAdminView] = useState('attendance');
           const [nextSessionAttendance, setNextSessionAttendance] = useState([]);
 
@@ -133,14 +136,14 @@
               fetchAlumnos();
               setNextSessionDate(getNextSaturday());
             }
-            if (activeTab === 'admin') {
+            if (activeTab === 'admin' && isAdminAuthenticated) {
               fetchAlumnos();
               setNextSessionDate(getNextSaturday());
               if (adminView === 'attendance') {
                 fetchNextSessionAttendance();
               }
             }
-          }, [activeTab, adminView]);
+          }, [activeTab, isAdminAuthenticated, adminView]);
 
           const getNextSaturday = () => {
             const today = new Date();
@@ -280,10 +283,49 @@
             return attendance ? attendance.presente : 'No confirmado';
           };
 
+          const handleAdminLogin = async (e) => {
+            e.preventDefault();
+            setLoading(true);
+
+            try {
+              const response = await fetch(
+                `${SUPABASE_URL}/rest/v1/profesores?select=*&nombre=eq.${encodeURIComponent(adminUsername)}&password=eq.${encodeURIComponent(adminPassword)}&activo=eq.true`,
+                {
+                  headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                  }
+                }
+              );
+
+              const data = await response.json();
+
+              if (data && data.length > 0) {
+                setIsAdminAuthenticated(true);
+                showMessage('success', `Bienvenido/a, ${data[0].nombre}!`);
+                setAdminUsername('');
+                setAdminPassword('');
+              } else {
+                showMessage('error', 'Usuario o contraseña incorrectos');
+              }
+            } catch (error) {
+              showMessage('error', 'Error de conexión');
+            } finally {
+              setLoading(false);
+            }
+          };
+
+          const handleAdminLogout = () => {
+            setIsAdminAuthenticated(false);
+            setAdminUsername('');
+            setAdminPassword('');
+            setActiveTab('register');
+          };
+
           return (
             <div className="container">
               <div className="card header card-padding">
-                <h1 className="title">🏒 Multiclubes</h1>
+                <h1 className="title">🏒 Club de Hockey</h1>
                 <p className="subtitle">Sistema de Registro y Asistencia</p>
               </div>
 
@@ -390,6 +432,44 @@
 
                 {activeTab === 'admin' && (
                   <div className="card-padding">
+                    {!isAdminAuthenticated ? (
+                      <div>
+                        <h3>Acceso para Profesores</h3>
+                        
+                        <div className="form-group">
+                          <label className="label">Usuario</label>
+                          <input
+                            type="text"
+                            value={adminUsername}
+                            onChange={(e) => setAdminUsername(e.target.value)}
+                            className="input"
+                            placeholder="Nombre de usuario"
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label className="label">Contraseña</label>
+                          <input
+                            type="password"
+                            value={adminPassword}
+                            onChange={(e) => setAdminPassword(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && handleAdminLogin(e)}
+                            className="input"
+                            placeholder="Contraseña"
+                          />
+                        </div>
+
+                        <button onClick={handleAdminLogin} disabled={loading} className="btn btn-primary">
+                          <Lock />
+                          <span>{loading ? 'Verificando...' : 'Ingresar'}</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div>
+                        <button onClick={handleAdminLogout} className="btn btn-danger" style={{width: 'auto', marginBottom: '1rem'}}>
+                          Cerrar Sesión
+                        </button>
+                    
                     <h3>Panel de Profesores</h3>
                     
                     <div className="admin-tabs">
@@ -479,8 +559,10 @@
                   </div>
                 )}
               </div>
+            )}
             </div>
-          );
+          </div>
+        );
         };
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
