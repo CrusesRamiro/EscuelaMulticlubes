@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar Alumno - Club de Hockey</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="card header card-padding">
+            <h1 class="title">🏒 Registrar Alumno</h1>
+            <p class="subtitle">Completa el formulario para dar de alta un nuevo alumno</p>
+        </div>
+
+        <div id="message" style="display: none;"></div>
+
+        <div class="card card-padding">
+            <a href="index.html" style="display: inline-flex; align-items: center; gap: 0.5rem; color: #4f46e5; text-decoration: none; margin-bottom: 1.5rem;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                Volver al inicio
+            </a>
+
+            <form id="registroForm">
+                <div class="form-group">
+                    <label class="label">DNI del Alumno *</label>
+                    <input type="number" id="dni" name="dni" class="input" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="label">Nombre Completo *</label>
+                    <input type="text" id="nombre_completo" name="nombre_completo" class="input" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="label">Fecha de Nacimiento *</label>
+                    <input type="date" id="fecha_nac" name="fecha_nac" class="input" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="label">Club</label>
+                    <input type="text" id="club" name="club" class="input">
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" id="equipacion" name="equipacion" class="checkbox">
+                    <label class="label">Tiene equipación</label>
+                </div>
+
+                <div class="border-t">
+                    <h3>Datos del Adulto Responsable</h3>
+
+                    <div class="form-group">
+                        <label class="label">Nombre *</label>
+                        <input type="text" id="nombre_adulto" name="nombre_adulto" class="input" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="label">Teléfono *</label>
+                        <input type="number" id="telefono_adulto" name="telefono_adulto" class="input" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="submitBtn">
+                    Registrar Alumno
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script>
+        const form = document.getElementById('registroForm');
+        const submitBtn = document.getElementById('submitBtn');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Validar formulario
+            if (!validateForm(form)) {
+                return;
+            }
+
+            // Deshabilitar botón
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Registrando...';
+
+            try {
+                const formData = {
+                    dni: parseInt(document.getElementById('dni').value),
+                    nombre_completo: document.getElementById('nombre_completo').value,
+                    fecha_nac: document.getElementById('fecha_nac').value,
+                    club: document.getElementById('club').value || null,
+                    equipacion: document.getElementById('equipacion').checked,
+                    nombre_adulto: document.getElementById('nombre_adulto').value,
+                    telefono_adulto: parseInt(document.getElementById('telefono_adulto').value)
+                };
+
+                const response = await supabaseRequest('alumnos', 'POST', formData);
+
+                if (response.ok) {
+                    showMessage('message', 'success', '¡Alumno registrado exitosamente!');
+                    form.reset();
+                } else {
+                    showMessage('message', 'error', 'Error al registrar. Verifica que el DNI no esté duplicado.');
+                }
+            } catch (error) {
+                showMessage('message', 'error', 'Error de conexión con el servidor');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Registrar Alumno';
+            }
+        });
+    </script>
+</body>
+</html>

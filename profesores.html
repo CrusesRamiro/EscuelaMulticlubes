@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Profesores - Club de Hockey</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="card header card-padding">
+            <h1 class="title">🔒 Panel de Profesores</h1>
+            <p class="subtitle">Acceso exclusivo para profesores</p>
+        </div>
+
+        <div id="message" style="display: none;"></div>
+
+        <!-- Login Section -->
+        <div id="loginSection" class="card card-padding">
+            <a href="index.html" style="display: inline-flex; align-items: center; gap: 0.5rem; color: #4f46e5; text-decoration: none; margin-bottom: 1.5rem;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                Volver al inicio
+            </a>
+
+            <h3>Acceso para Profesores</h3>
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <label class="label">Usuario</label>
+                    <input type="text" id="username" class="input" placeholder="Nombre de usuario" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="label">Contraseña</label>
+                    <input type="password" id="password" class="input" placeholder="Contraseña" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="loginBtn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                    <span>Ingresar</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Admin Panel Section -->
+        <div id="adminSection" class="card card-padding" style="display: none;">
+            <button id="logoutBtn" class="btn btn-danger" style="width: auto; margin-bottom: 1rem;">
+                Cerrar Sesión
+            </button>
+
+            <h3>Panel de Profesores</h3>
+
+            <div class="admin-tabs">
+                <button id="tabAttendance" class="admin-tab active">Próxima Clase</button>
+                <button id="tabAll" class="admin-tab">Todos los Alumnos</button>
+            </div>
+
+            <!-- Próxima Clase View -->
+            <div id="viewAttendance">
+                <div class="info-box">
+                    <p class="info-text">
+                        Próxima sesión: <strong id="nextSessionDateAdmin">Cargando...</strong>
+                    </p>
+                </div>
+
+                <div class="table-container space-y">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Alumno</th>
+                                <th>Edad</th>
+                                <th>Equipación</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendanceTableBody">
+                            <tr><td colspan="4">Cargando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Todos los Alumnos View -->
+            <div id="viewAll" style="display: none;">
+                <div class="table-container space-y">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>DNI</th>
+                                <th>Nombre</th>
+                                <th>Fecha Nac.</th>
+                                <th>Club</th>
+                                <th>Equip.</th>
+                                <th>Adulto</th>
+                                <th>Teléfono</th>
+                            </tr>
+                        </thead>
+                        <tbody id="allAlumnosTableBody">
+                            <tr><td colspan="7">Cargando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script>
+        const loginSection = document.getElementById('loginSection');
+        const adminSection = document.getElementById('adminSection');
+        const loginForm = document.getElementById('loginForm');
+        const loginBtn = document.getElementById('loginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+
+        const tabAttendance = document.getElementById('tabAttendance');
+        const tabAll = document.getElementById('tabAll');
+        const viewAttendance = document.getElementById('viewAttendance');
+        const viewAll = document.getElementById('viewAll');
+
+        let nextSessionDate = '';
+        let allAlumnos = [];
+        let attendanceData = [];
+
+        // Login
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = '<span>Verificando...</span>';
+
+            try {
+                const profesores = await supabaseRequest(
+                    `profesores?select=*&nombre=eq.${encodeURIComponent(username)}&password=eq.${encodeURIComponent(password)}&activo=eq.true`
+                );
+
+                if (profesores && profesores.length > 0) {
+                    showMessage('message', 'success', `¡Bienvenido/a, ${profesores[0].nombre}!`);
+                    loginSection.style.display = 'none';
+                    adminSection.style.display = 'block';
+                    await loadAdminData();
+                } else {
+                    showMessage('message', 'error', 'Usuario o contraseña incorrectos');
+                }
+            } catch (error) {
+                showMessage('message', 'error', 'Error de conexión con el servidor');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = `
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                    <span>Ingresar</span>
+                `;
+            }
+        });
+
+        // Logout
+        logoutBtn.addEventListener('click', () => {
+            adminSection.style.display = 'none';
+            loginSection.style.display = 'block';
+            loginForm.reset();
+        });
+
+        // Tabs
+        tabAttendance.addEventListener('click', () => {
+            tabAttendance.classList.add('active');
+            tabAll.classList.remove('active');
+            viewAttendance.style.display = 'block';
+            viewAll.style.display = 'none';
+        });
+
+        tabAll.addEventListener('click', () => {
+            tabAll.classList.add('active');
+            tabAttendance.classList.remove('active');
+            viewAll.style.display = 'block';
+            viewAttendance.style.display = 'none';
+        });
+
+        // Cargar datos del admin
+        async function loadAdminData() {
+            nextSessionDate = getNextSaturday();
+            document.getElementById('nextSessionDateAdmin').textContent = formatDate(nextSessionDate);
+
+            await loadAlumnos();
+            await loadAttendance();
+            renderAttendanceTable();
+            renderAllAlumnosTable();
+        }
+
+        // Cargar alumnos
+        async function loadAlumnos() {
+            try {
+                allAlumnos = await fetchAlumnos();
+            } catch (error) {
+                showMessage('message', 'error', 'Error cargando alumnos');
+            }
+        }
+
+        // Cargar asistencia
+        async function loadAttendance() {
+            try {
+                attendanceData = await supabaseRequest(
+                    `asistencia?select=alumno_dni,presente&fecha=eq.${nextSessionDate}`
+                );
+            } catch (error) {
+                showMessage('message', 'error', 'Error cargando asistencia');
+            }
+        }
+
+        // Obtener estado de asistencia de un alumno
+        function getAttendanceStatus(dni) {
+            const attendance = attendanceData.find(a => a.alumno_dni === dni);
+            return attendance ? attendance.presente : 'No confirmado';
+        }
+
+        // Renderizar tabla de asistencia
+        function renderAttendanceTable() {
+            const tbody = document.getElementById('attendanceTableBody');
+
+            if (allAlumnos.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4">No hay alumnos registrados</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = allAlumnos.map(alumno => {
+                const status = getAttendanceStatus(alumno.dni);
+                const age = calculateAge(alumno.fecha_nac) || '-';
+                const equipacion = alumno.equipacion ? '✓' : '✗';
+
+                let badge = '';
+                if (status === 'si') {
+                    badge = '<span class="badge badge-success">Asiste</span>';
+                } else if (status === 'no') {
+                    badge = '<span class="badge badge-danger">No Asiste</span>';
+                } else {
+                    badge = '<span class="badge badge-warning">Sin confirmar</span>';
+                }
+
+                return `
+                    <tr>
+                        <td>${alumno.nombre_completo}</td>
+                        <td>${age}</td>
+                        <td>${equipacion}</td>
+                        <td>${badge}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Renderizar tabla de todos los alumnos
+        function renderAllAlumnosTable() {
+            const tbody = document.getElementById('allAlumnosTableBody');
+
+            if (allAlumnos.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7">No hay alumnos registrados</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = allAlumnos.map(alumno => {
+                const fechaNac = alumno.fecha_nac ?
+                    new Date(alumno.fecha_nac).toLocaleDateString('es-ES') : '-';
+                const club = alumno.club || '-';
+                const equipacion = alumno.equipacion ? '✓' : '✗';
+
+                return `
+                    <tr>
+                        <td>${alumno.dni}</td>
+                        <td>${alumno.nombre_completo}</td>
+                        <td>${fechaNac}</td>
+                        <td>${club}</td>
+                        <td>${equipacion}</td>
+                        <td>${alumno.nombre_adulto}</td>
+                        <td>${alumno.telefono_adulto}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+    </script>
+</body>
+</html>

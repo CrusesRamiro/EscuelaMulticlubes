@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asistencia - Club de Hockey</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="card header card-padding">
+            <h1 class="title">📋 Confirmar Asistencia</h1>
+            <p class="subtitle">Marca si asistirás a la próxima clase</p>
+        </div>
+
+        <div id="message" style="display: none;"></div>
+
+        <div class="card card-padding">
+            <a href="index.html" style="display: inline-flex; align-items: center; gap: 0.5rem; color: #4f46e5; text-decoration: none; margin-bottom: 1.5rem;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                Volver al inicio
+            </a>
+
+            <div class="info-box">
+                <p class="info-text">
+                    Próxima sesión: <strong id="nextSessionDate">Cargando...</strong>
+                </p>
+            </div>
+
+            <div class="form-group space-y">
+                <label class="label">Selecciona al alumno</label>
+                <select id="alumnoSelect" class="select">
+                    <option value="">-- Selecciona un alumno --</option>
+                </select>
+            </div>
+
+            <div class="grid-2 space-y">
+                <button id="btnAsiste" class="btn btn-success" disabled>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                    </svg>
+                    <span>Sí Asiste</span>
+                </button>
+                <button id="btnNoAsiste" class="btn btn-danger" disabled>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    <span>No Asiste</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script>
+        let nextSessionDate = '';
+        const alumnoSelect = document.getElementById('alumnoSelect');
+        const btnAsiste = document.getElementById('btnAsiste');
+        const btnNoAsiste = document.getElementById('btnNoAsiste');
+
+        // Cargar datos al iniciar
+        async function init() {
+            nextSessionDate = getNextSaturday();
+            document.getElementById('nextSessionDate').textContent = formatDate(nextSessionDate);
+            await loadAlumnos();
+        }
+
+        // Cargar lista de alumnos
+        async function loadAlumnos() {
+            try {
+                const alumnos = await fetchAlumnos();
+                alumnoSelect.innerHTML = '<option value="">-- Selecciona un alumno --</option>';
+                alumnos.forEach(alumno => {
+                    const option = document.createElement('option');
+                    option.value = alumno.dni;
+                    option.textContent = alumno.nombre_completo;
+                    alumnoSelect.appendChild(option);
+                });
+            } catch (error) {
+                showMessage('message', 'error', 'Error cargando alumnos');
+            }
+        }
+
+        // Habilitar/deshabilitar botones según selección
+        alumnoSelect.addEventListener('change', () => {
+            const isSelected = alumnoSelect.value !== '';
+            btnAsiste.disabled = !isSelected;
+            btnNoAsiste.disabled = !isSelected;
+        });
+
+        // Manejar asistencia
+        async function handleAttendance(presente) {
+            const alumno_dni = parseInt(alumnoSelect.value);
+
+            if (!alumno_dni) {
+                showMessage('message', 'error', 'Por favor selecciona un alumno');
+                return;
+            }
+
+            // Deshabilitar botones
+            btnAsiste.disabled = true;
+            btnNoAsiste.disabled = true;
+
+            try {
+                const data = {
+                    alumno_dni: alumno_dni,
+                    fecha: nextSessionDate,
+                    presente: presente
+                };
+
+                const response = await supabaseRequest('asistencia', 'POST', data);
+
+                if (response.ok) {
+                    showMessage('message', 'success',
+                        `Asistencia registrada: ${presente === 'si' ? 'Asistirá' : 'No asistirá'}`);
+                    alumnoSelect.value = '';
+                } else {
+                    showMessage('message', 'error',
+                        'Error al registrar. Puede que ya hayas confirmado asistencia para esta fecha.');
+                }
+            } catch (error) {
+                showMessage('message', 'error', 'Error de conexión con el servidor');
+            } finally {
+                btnAsiste.disabled = false;
+                btnNoAsiste.disabled = false;
+            }
+        }
+
+        // Event listeners para botones
+        btnAsiste.addEventListener('click', () => handleAttendance('si'));
+        btnNoAsiste.addEventListener('click', () => handleAttendance('no'));
+
+        // Inicializar
+        init();
+    </script>
+</body>
+</html>
