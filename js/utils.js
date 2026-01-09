@@ -41,21 +41,44 @@ function getNextSaturday() {
  * @returns {string} Fecha en formato ISO (YYYY-MM-DD)
  */
 function getNextSunday() {
+    // Usar fecha local sin conversión UTC
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalizar a medianoche
+
     const dayOfWeek = today.getDay(); // 0 = Domingo, 1 = Lunes, ..., 6 = Sábado
-    const daysUntilSunday = dayOfWeek === 0 ? 7 : (7 - dayOfWeek); // Si es domingo hoy, el próximo es en 7 días
+
+    // Calcular días hasta el próximo domingo
+    let daysUntilSunday;
+    if (dayOfWeek === 0) {
+        // Si hoy es domingo, el próximo es en 7 días
+        daysUntilSunday = 7;
+    } else {
+        // Para cualquier otro día, calcular días restantes hasta domingo
+        daysUntilSunday = 7 - dayOfWeek;
+    }
+
     const nextSun = new Date(today);
     nextSun.setDate(today.getDate() + daysUntilSunday);
-    return nextSun.toISOString().split('T')[0];
+
+    // Formatear manualmente para evitar problemas de zona horaria
+    const year = nextSun.getFullYear();
+    const month = String(nextSun.getMonth() + 1).padStart(2, '0');
+    const day = String(nextSun.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
 }
 
 /**
  * Formatea una fecha en formato legible en español
- * @param {string} dateString - Fecha en formato ISO
+ * @param {string} dateString - Fecha en formato ISO (YYYY-MM-DD)
  * @returns {string} Fecha formateada
  */
 function formatDate(dateString) {
-    const date = new Date(dateString);
+    // Parsear manualmente para evitar problemas de zona horaria
+    const [year, month, day] = dateString.split('-').map(num => parseInt(num, 10));
+    // Crear fecha en zona horaria local (month - 1 porque los meses empiezan en 0)
+    const date = new Date(year, month - 1, day);
+
     return date.toLocaleDateString('es-ES', {
         weekday: 'long',
         year: 'numeric',
