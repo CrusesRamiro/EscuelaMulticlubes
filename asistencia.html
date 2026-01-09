@@ -67,7 +67,7 @@
 
         // Cargar datos al iniciar
         async function init() {
-            nextSessionDate = getNextSaturday();
+            nextSessionDate = getNextSunday();
             document.getElementById('nextSessionDate').textContent = formatDate(nextSessionDate);
             await loadAlumnos();
         }
