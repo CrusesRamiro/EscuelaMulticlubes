@@ -196,7 +196,7 @@
 
         // Cargar datos del admin
         async function loadAdminData() {
-            nextSessionDate = getNextSaturday();
+            nextSessionDate = getNextSunday();
             document.getElementById('nextSessionDateAdmin').textContent = formatDate(nextSessionDate);
 
             await loadAlumnos();

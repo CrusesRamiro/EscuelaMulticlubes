@@ -31,10 +31,18 @@
             </div>
 
             <div class="form-group space-y">
-                <label class="label">Selecciona al alumno</label>
-                <select id="alumnoSelect" class="select">
-                    <option value="">-- Selecciona un alumno --</option>
-                </select>
+                <label class="label">Busca y selecciona al alumno</label>
+                <input
+                    type="text"
+                    id="alumnoInput"
+                    class="input"
+                    placeholder="Escribe el nombre del alumno..."
+                    list="alumnosList"
+                    autocomplete="off"
+                >
+                <datalist id="alumnosList">
+                </datalist>
+                <input type="hidden" id="alumnoDNI">
             </div>
 
             <div class="grid-2 space-y">
@@ -61,7 +69,10 @@
     <script src="js/utils.js"></script>
     <script>
         let nextSessionDate = '';
-        const alumnoSelect = document.getElementById('alumnoSelect');
+        let alumnosData = [];
+        const alumnoInput = document.getElementById('alumnoInput');
+        const alumnosList = document.getElementById('alumnosList');
+        const alumnoDNI = document.getElementById('alumnoDNI');
         const btnAsiste = document.getElementById('btnAsiste');
         const btnNoAsiste = document.getElementById('btnNoAsiste');
 
@@ -75,29 +86,52 @@
         // Cargar lista de alumnos
         async function loadAlumnos() {
             try {
-                const alumnos = await fetchAlumnos();
-                alumnoSelect.innerHTML = '<option value="">-- Selecciona un alumno --</option>';
-                alumnos.forEach(alumno => {
-                    const option = document.createElement('option');
-                    option.value = alumno.dni;
-                    option.textContent = alumno.nombre_completo;
-                    alumnoSelect.appendChild(option);
-                });
+                alumnosData = await fetchAlumnos();
+                updateDatalist(alumnosData);
             } catch (error) {
                 showMessage('message', 'error', 'Error cargando alumnos');
             }
         }
 
-        // Habilitar/deshabilitar botones según selección
-        alumnoSelect.addEventListener('change', () => {
-            const isSelected = alumnoSelect.value !== '';
-            btnAsiste.disabled = !isSelected;
-            btnNoAsiste.disabled = !isSelected;
+        // Actualizar datalist con alumnos
+        function updateDatalist(alumnos) {
+            alumnosList.innerHTML = '';
+            alumnos.forEach(alumno => {
+                const option = document.createElement('option');
+                option.value = alumno.nombre_completo;
+                option.setAttribute('data-dni', alumno.dni);
+                alumnosList.appendChild(option);
+            });
+        }
+
+        // Manejar cambio en el input
+        alumnoInput.addEventListener('input', () => {
+            const inputValue = alumnoInput.value;
+            const selectedAlumno = alumnosData.find(a => a.nombre_completo === inputValue);
+
+            if (selectedAlumno) {
+                alumnoDNI.value = selectedAlumno.dni;
+                btnAsiste.disabled = false;
+                btnNoAsiste.disabled = false;
+            } else {
+                alumnoDNI.value = '';
+                btnAsiste.disabled = true;
+                btnNoAsiste.disabled = true;
+            }
+        });
+
+        // Limpiar input al hacer blur si no hay selección válida
+        alumnoInput.addEventListener('blur', () => {
+            setTimeout(() => {
+                if (!alumnoDNI.value) {
+                    alumnoInput.value = '';
+                }
+            }, 200);
         });
 
         // Manejar asistencia
         async function handleAttendance(presente) {
-            const alumno_dni = parseInt(alumnoSelect.value);
+            const alumno_dni = parseInt(alumnoDNI.value);
 
             if (!alumno_dni) {
                 showMessage('message', 'error', 'Por favor selecciona un alumno');
@@ -120,7 +154,8 @@
                 if (response.ok) {
                     showMessage('message', 'success',
                         `Asistencia registrada: ${presente === 'si' ? 'Asistirá' : 'No asistirá'}`);
-                    alumnoSelect.value = '';
+                    alumnoInput.value = '';
+                    alumnoDNI.value = '';
                 } else {
                     showMessage('message', 'error',
                         'Error al registrar. Puede que ya hayas confirmado asistencia para esta fecha.');
@@ -128,8 +163,8 @@
             } catch (error) {
                 showMessage('message', 'error', 'Error de conexión con el servidor');
             } finally {
-                btnAsiste.disabled = false;
-                btnNoAsiste.disabled = false;
+                btnAsiste.disabled = !alumnoDNI.value;
+                btnNoAsiste.disabled = !alumnoDNI.value;
             }
         }
 

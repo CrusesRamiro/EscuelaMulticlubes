@@ -37,6 +37,19 @@ function getNextSaturday() {
 }
 
 /**
+ * Calcula el próximo domingo desde hoy
+ * @returns {string} Fecha en formato ISO (YYYY-MM-DD)
+ */
+function getNextSunday() {
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 = Domingo, 1 = Lunes, ..., 6 = Sábado
+    const daysUntilSunday = dayOfWeek === 0 ? 7 : (7 - dayOfWeek); // Si es domingo hoy, el próximo es en 7 días
+    const nextSun = new Date(today);
+    nextSun.setDate(today.getDate() + daysUntilSunday);
+    return nextSun.toISOString().split('T')[0];
+}
+
+/**
  * Formatea una fecha en formato legible en español
  * @param {string} dateString - Fecha en formato ISO
  * @returns {string} Fecha formateada
