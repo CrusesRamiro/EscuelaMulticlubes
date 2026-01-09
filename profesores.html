@@ -96,13 +96,20 @@
                                 <th>Nombre</th>
                                 <th>Fecha Nac.</th>
                                 <th>Club</th>
-                                <th>Equip.</th>
+                                <th style="font-size: 0.75rem;">Casco</th>
+                                <th style="font-size: 0.75rem;">Patines</th>
+                                <th style="font-size: 0.75rem;">Guantes</th>
+                                <th style="font-size: 0.75rem;">Palo</th>
+                                <th style="font-size: 0.75rem;">Pads</th>
+                                <th style="font-size: 0.75rem;">Pants</th>
+                                <th style="font-size: 0.75rem;">Coderas</th>
+                                <th style="font-size: 0.75rem;">Pechera</th>
                                 <th>Adulto</th>
                                 <th>Teléfono</th>
                             </tr>
                         </thead>
                         <tbody id="allAlumnosTableBody">
-                            <tr><td colspan="7">Cargando...</td></tr>
+                            <tr><td colspan="14">Cargando...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -236,7 +243,8 @@
             tbody.innerHTML = allAlumnos.map(alumno => {
                 const status = getAttendanceStatus(alumno.dni);
                 const age = calculateAge(alumno.fecha_nac) || '-';
-                const equipacion = alumno.equipacion ? '✓' : '✗';
+                const equipSummary = getEquipmentSummary(alumno);
+                const equipDetail = getEquipmentDetail(alumno);
 
                 let badge = '';
                 if (status === 'si') {
@@ -251,7 +259,7 @@
                     <tr>
                         <td>${alumno.nombre_completo}</td>
                         <td>${age}</td>
-                        <td>${equipacion}</td>
+                        <td title="${equipDetail}" style="cursor: help;">${equipSummary}</td>
                         <td>${badge}</td>
                     </tr>
                 `;
@@ -263,15 +271,14 @@
             const tbody = document.getElementById('allAlumnosTableBody');
 
             if (allAlumnos.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7">No hay alumnos registrados</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="14">No hay alumnos registrados</td></tr>';
                 return;
             }
 
             tbody.innerHTML = allAlumnos.map(alumno => {
                 const fechaNac = alumno.fecha_nac ?
                     new Date(alumno.fecha_nac).toLocaleDateString('es-ES') : '-';
-                const club = alumno.club || '-';
-                const equipacion = alumno.equipacion ? '✓' : '✗';
+                const club = alumno.clubes?.nombre || '-';
 
                 return `
                     <tr>
@@ -279,7 +286,14 @@
                         <td>${alumno.nombre_completo}</td>
                         <td>${fechaNac}</td>
                         <td>${club}</td>
-                        <td>${equipacion}</td>
+                        <td style="text-align: center;">${alumno.casco ? '✓' : '✗'}</td>
+                        <td style="text-align: center;">${alumno.patines ? '✓' : '✗'}</td>
+                        <td style="text-align: center;">${alumno.guantes ? '✓' : '✗'}</td>
+                        <td style="text-align: center;">${alumno.palo ? '✓' : '✗'}</td>
+                        <td style="text-align: center;">${alumno.pads ? '✓' : '✗'}</td>
+                        <td style="text-align: center;">${alumno.pants ? '✓' : '✗'}</td>
+                        <td style="text-align: center;">${alumno.coderas ? '✓' : '✗'}</td>
+                        <td style="text-align: center;">${alumno.pechera ? '✓' : '✗'}</td>
                         <td>${alumno.nombre_adulto}</td>
                         <td>${alumno.telefono_adulto}</td>
                     </tr>

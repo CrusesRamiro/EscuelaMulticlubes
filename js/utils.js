@@ -96,11 +96,53 @@ async function supabaseRequest(endpoint, method = 'GET', body = null) {
 }
 
 /**
- * Obtiene todos los alumnos ordenados por nombre
+ * Obtiene todos los clubes ordenados por nombre
+ * @returns {Promise<Array>} Array de clubes
+ */
+async function fetchClubes() {
+    return await supabaseRequest('clubes?select=id,nombre&order=nombre.asc');
+}
+
+/**
+ * Obtiene todos los alumnos ordenados por nombre con información del club
  * @returns {Promise<Array>} Array de alumnos
  */
 async function fetchAlumnos() {
-    return await supabaseRequest('alumnos?select=dni,nombre_completo,fecha_nac,club,equipacion,nombre_adulto,telefono_adulto&order=nombre_completo.asc');
+    return await supabaseRequest('alumnos?select=dni,nombre_completo,fecha_nac,club_id,clubes(nombre),casco,patines,guantes,palo,pads,pants,coderas,pechera,nombre_adulto,telefono_adulto&order=nombre_completo.asc');
+}
+
+/**
+ * Calcula el resumen de equipación de un alumno
+ * @param {object} alumno - Objeto alumno con campos de equipación
+ * @returns {string} Texto con resumen de equipación (ej: "5/8")
+ */
+function getEquipmentSummary(alumno) {
+    const equipmentFields = ['casco', 'patines', 'guantes', 'palo', 'pads', 'pants', 'coderas', 'pechera'];
+    const total = equipmentFields.length;
+    const count = equipmentFields.filter(field => alumno[field]).length;
+    return `${count}/${total}`;
+}
+
+/**
+ * Genera tooltip con detalle de equipación
+ * @param {object} alumno - Objeto alumno con campos de equipación
+ * @returns {string} HTML del tooltip
+ */
+function getEquipmentDetail(alumno) {
+    const equipment = {
+        'Casco': alumno.casco,
+        'Patines': alumno.patines,
+        'Guantes': alumno.guantes,
+        'Palo': alumno.palo,
+        'Pads': alumno.pads,
+        'Pants': alumno.pants,
+        'Coderas': alumno.coderas,
+        'Pechera': alumno.pechera
+    };
+
+    return Object.entries(equipment)
+        .map(([name, has]) => `${name}: ${has ? '✓' : '✗'}`)
+        .join('\n');
 }
 
 /**

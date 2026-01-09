@@ -42,12 +42,58 @@
 
                 <div class="form-group">
                     <label class="label">Club</label>
-                    <input type="text" id="club" name="club" class="input">
+                    <select id="club" name="club" class="select">
+                        <option value="">Cargando clubes...</option>
+                    </select>
                 </div>
 
-                <div class="form-group checkbox-group">
-                    <input type="checkbox" id="equipacion" name="equipacion" class="checkbox">
-                    <label class="label">Tiene equipación</label>
+                <div class="border-t">
+                    <h3>Equipación</h3>
+                    <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 1rem;">
+                        Marca los elementos de equipación que posee el alumno
+                    </p>
+
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem;">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="casco" name="casco" class="checkbox">
+                            <label class="label">Casco</label>
+                        </div>
+
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="patines" name="patines" class="checkbox">
+                            <label class="label">Patines</label>
+                        </div>
+
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="guantes" name="guantes" class="checkbox">
+                            <label class="label">Guantes</label>
+                        </div>
+
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="palo" name="palo" class="checkbox">
+                            <label class="label">Palo</label>
+                        </div>
+
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="pads" name="pads" class="checkbox">
+                            <label class="label">Pads</label>
+                        </div>
+
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="pants" name="pants" class="checkbox">
+                            <label class="label">Pants</label>
+                        </div>
+
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="coderas" name="coderas" class="checkbox">
+                            <label class="label">Coderas</label>
+                        </div>
+
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="pechera" name="pechera" class="checkbox">
+                            <label class="label">Pechera</label>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="border-t">
@@ -76,6 +122,27 @@
     <script>
         const form = document.getElementById('registroForm');
         const submitBtn = document.getElementById('submitBtn');
+        const clubSelect = document.getElementById('club');
+
+        // Cargar clubes al iniciar
+        async function loadClubes() {
+            try {
+                const clubes = await fetchClubes();
+                clubSelect.innerHTML = '<option value="">-- Selecciona un club --</option>';
+                clubes.forEach(club => {
+                    const option = document.createElement('option');
+                    option.value = club.id;
+                    option.textContent = club.nombre;
+                    clubSelect.appendChild(option);
+                });
+            } catch (error) {
+                clubSelect.innerHTML = '<option value="">Error cargando clubes</option>';
+                showMessage('message', 'error', 'Error cargando clubes');
+            }
+        }
+
+        // Cargar clubes al cargar la página
+        loadClubes();
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -90,12 +157,20 @@
             submitBtn.textContent = 'Registrando...';
 
             try {
+                const clubValue = document.getElementById('club').value;
                 const formData = {
                     dni: parseInt(document.getElementById('dni').value),
                     nombre_completo: document.getElementById('nombre_completo').value,
                     fecha_nac: document.getElementById('fecha_nac').value,
-                    club: document.getElementById('club').value || null,
-                    equipacion: document.getElementById('equipacion').checked,
+                    club_id: clubValue ? parseInt(clubValue) : null,
+                    casco: document.getElementById('casco').checked,
+                    patines: document.getElementById('patines').checked,
+                    guantes: document.getElementById('guantes').checked,
+                    palo: document.getElementById('palo').checked,
+                    pads: document.getElementById('pads').checked,
+                    pants: document.getElementById('pants').checked,
+                    coderas: document.getElementById('coderas').checked,
+                    pechera: document.getElementById('pechera').checked,
                     nombre_adulto: document.getElementById('nombre_adulto').value,
                     telefono_adulto: parseInt(document.getElementById('telefono_adulto').value)
                 };
