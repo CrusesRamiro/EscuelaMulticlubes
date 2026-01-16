@@ -288,6 +288,57 @@ async function generateClaseFromConfirmations(fecha) {
 }
 
 /**
+ * Obtiene todos los domingos pasados que tienen confirmaciones pero no tienen clase generada
+ * @returns {Promise<Array>} Array de fechas en formato ISO
+ */
+async function getPendingSundaysWithConfirmations() {
+    try {
+        // Obtener todas las confirmaciones de domingos pasados
+        const today = new Date().toISOString().split('T')[0];
+        const allConfirmations = await supabaseRequest(`asistencia?select=fecha&fecha=lt.${today}&order=fecha.desc`);
+
+        // Obtener fechas únicas de confirmaciones
+        const uniqueDates = [...new Set(allConfirmations.map(c => c.fecha))];
+
+        // Obtener todas las clases existentes
+        const existingClasses = await fetchClases();
+        const existingDates = new Set(existingClasses.map(c => c.fecha));
+
+        // Filtrar solo fechas que NO tienen clase generada
+        const pendingDates = uniqueDates.filter(date => !existingDates.has(date));
+
+        return pendingDates;
+    } catch (error) {
+        console.error('Error obteniendo domingos pendientes:', error);
+        return [];
+    }
+}
+
+/**
+ * Genera automáticamente todas las clases pendientes de domingos pasados
+ * @returns {Promise<number>} Cantidad de clases generadas
+ */
+async function autoGeneratePendingClasses() {
+    const pendingDates = await getPendingSundaysWithConfirmations();
+
+    if (pendingDates.length === 0) {
+        return 0;
+    }
+
+    let generated = 0;
+    for (const fecha of pendingDates) {
+        try {
+            await generateClaseFromConfirmations(fecha);
+            generated++;
+        } catch (error) {
+            console.error(`Error generando clase para ${fecha}:`, error);
+        }
+    }
+
+    return generated;
+}
+
+/**
  * Valida un formulario antes de enviarlo
  * @param {HTMLFormElement} form - Formulario a validar
  * @returns {boolean} true si es válido, false si no
