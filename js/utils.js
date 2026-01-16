@@ -182,6 +182,112 @@ function getEquipmentDetail(alumno) {
 }
 
 /**
+ * Obtiene todas las clases ordenadas por fecha descendente
+ * @returns {Promise<Array>} Array de clases
+ */
+async function fetchClases() {
+    return await supabaseRequest('clases?select=*&order=fecha.desc');
+}
+
+/**
+ * Obtiene una clase específica por fecha
+ * @param {string} fecha - Fecha en formato ISO
+ * @returns {Promise<Object|null>} Clase o null si no existe
+ */
+async function fetchClaseByFecha(fecha) {
+    const clases = await supabaseRequest(`clases?select=*&fecha=eq.${fecha}`);
+    return clases.length > 0 ? clases[0] : null;
+}
+
+/**
+ * Crea una nueva clase
+ * @param {string} fecha - Fecha en formato ISO
+ * @returns {Promise<Object>} Clase creada
+ */
+async function createClase(fecha) {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/clases`, {
+        method: 'POST',
+        headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({ fecha })
+    });
+    const data = await response.json();
+    return data[0];
+}
+
+/**
+ * Obtiene las asistencias de una clase específica
+ * @param {number} claseId - ID de la clase
+ * @returns {Promise<Array>} Array de asistencias con datos del alumno
+ */
+async function fetchClaseAsistencias(claseId) {
+    return await supabaseRequest(`clase_asistencias?select=*,alumnos(dni,nombre_completo,fecha_nac,clubes(nombre))&clase_id=eq.${claseId}`);
+}
+
+/**
+ * Crea o actualiza la asistencia de un alumno en una clase
+ * @param {number} claseId - ID de la clase
+ * @param {number} alumnoDni - DNI del alumno
+ * @param {boolean} asistio - Si asistió o no
+ * @returns {Promise<Response>} Respuesta de la petición
+ */
+async function upsertClaseAsistencia(claseId, alumnoDni, asistio) {
+    return await fetch(`${SUPABASE_URL}/rest/v1/clase_asistencias`, {
+        method: 'POST',
+        headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'resolution=merge-duplicates,return=minimal'
+        },
+        body: JSON.stringify({
+            clase_id: claseId,
+            alumno_dni: alumnoDni,
+            asistio: asistio
+        })
+    });
+}
+
+/**
+ * Genera una clase automáticamente desde las confirmaciones de los padres
+ * @param {string} fecha - Fecha en formato ISO
+ * @returns {Promise<Object>} Clase creada con asistencias
+ */
+async function generateClaseFromConfirmations(fecha) {
+    // Crear la clase
+    const clase = await createClase(fecha);
+
+    // Obtener todas las confirmaciones de los padres para esa fecha
+    const confirmaciones = await supabaseRequest(`asistencia?select=alumno_dni,presente&fecha=eq.${fecha}`);
+
+    // Obtener todos los alumnos
+    const todosAlumnos = await fetchAlumnos();
+
+    // Crear asistencias basadas en las confirmaciones
+    const asistenciasPromises = todosAlumnos.map(async (alumno) => {
+        const confirmacion = confirmaciones.find(c => c.alumno_dni === alumno.dni);
+        let asistio = null; // null = sin confirmar
+
+        if (confirmacion) {
+            asistio = confirmacion.presente === 'si';
+        }
+
+        // Solo crear registro si hay confirmación (si o no)
+        if (asistio !== null) {
+            return upsertClaseAsistencia(clase.id, alumno.dni, asistio);
+        }
+    });
+
+    await Promise.all(asistenciasPromises.filter(p => p !== undefined));
+
+    return clase;
+}
+
+/**
  * Valida un formulario antes de enviarlo
  * @param {HTMLFormElement} form - Formulario a validar
  * @returns {boolean} true si es válido, false si no

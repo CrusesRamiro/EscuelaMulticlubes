@@ -58,6 +58,7 @@
 
             <div class="admin-tabs">
                 <button id="tabAttendance" class="admin-tab active">Próxima Clase</button>
+                <button id="tabHistory" class="admin-tab">Historial</button>
                 <button id="tabAll" class="admin-tab">Todos los Alumnos</button>
             </div>
 
@@ -83,6 +84,63 @@
                             <tr><td colspan="4">Cargando...</td></tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <!-- Historial View -->
+            <div id="viewHistory" style="display: none;">
+                <div style="margin-bottom: 1rem;">
+                    <button id="btnGenerateToday" class="btn btn-primary" style="width: auto;">
+                        Generar Clase de Hoy
+                    </button>
+                </div>
+
+                <div class="table-container space-y">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Total Alumnos</th>
+                                <th>Asistieron</th>
+                                <th>No Asistieron</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody">
+                            <tr><td colspan="5">Cargando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Modal para editar clase -->
+                <div id="modalEditClase" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; overflow-y: auto;">
+                    <div style="max-width: 48rem; margin: 2rem auto; background: white; border-radius: 0.5rem; padding: 1.5rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h3 id="modalTitle">Editar Clase</h3>
+                            <button id="btnCloseModal" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+                        </div>
+
+                        <div id="modalContent">
+                            <div class="table-container">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Alumno</th>
+                                            <th>Confirmó</th>
+                                            <th>Asistió</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="modalTableBody">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 1rem; display: flex; gap: 0.5rem; justify-content: flex-end;">
+                            <button id="btnSaveClase" class="btn btn-primary" style="width: auto;">Guardar Cambios</button>
+                            <button id="btnCancelModal" class="btn" style="width: auto; background: #6b7280; color: white;">Cancelar</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -127,13 +185,18 @@
         const logoutBtn = document.getElementById('logoutBtn');
 
         const tabAttendance = document.getElementById('tabAttendance');
+        const tabHistory = document.getElementById('tabHistory');
         const tabAll = document.getElementById('tabAll');
         const viewAttendance = document.getElementById('viewAttendance');
+        const viewHistory = document.getElementById('viewHistory');
         const viewAll = document.getElementById('viewAll');
 
         let nextSessionDate = '';
         let allAlumnos = [];
         let attendanceData = [];
+        let clases = [];
+        let currentClaseId = null;
+        let claseAsistencias = [];
 
         // Login
         loginForm.addEventListener('submit', async (e) => {
@@ -182,16 +245,30 @@
         // Tabs
         tabAttendance.addEventListener('click', () => {
             tabAttendance.classList.add('active');
+            tabHistory.classList.remove('active');
             tabAll.classList.remove('active');
             viewAttendance.style.display = 'block';
+            viewHistory.style.display = 'none';
             viewAll.style.display = 'none';
+        });
+
+        tabHistory.addEventListener('click', async () => {
+            tabHistory.classList.add('active');
+            tabAttendance.classList.remove('active');
+            tabAll.classList.remove('active');
+            viewHistory.style.display = 'block';
+            viewAttendance.style.display = 'none';
+            viewAll.style.display = 'none';
+            await loadHistorial();
         });
 
         tabAll.addEventListener('click', () => {
             tabAll.classList.add('active');
             tabAttendance.classList.remove('active');
+            tabHistory.classList.remove('active');
             viewAll.style.display = 'block';
             viewAttendance.style.display = 'none';
+            viewHistory.style.display = 'none';
         });
 
         // Cargar datos del admin
@@ -300,6 +377,155 @@
                 `;
             }).join('');
         }
+
+        // ========== HISTORIAL DE CLASES ==========
+
+        // Cargar historial de clases
+        async function loadHistorial() {
+            try {
+                clases = await fetchClases();
+                await renderHistorial();
+            } catch (error) {
+                showMessage('message', 'error', 'Error cargando historial');
+            }
+        }
+
+        // Renderizar historial
+        async function renderHistorial() {
+            const tbody = document.getElementById('historyTableBody');
+
+            if (clases.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5">No hay clases registradas</td></tr>';
+                return;
+            }
+
+            const rows = await Promise.all(clases.map(async (clase) => {
+                const asistencias = await fetchClaseAsistencias(clase.id);
+                const totalAlumnos = asistencias.length;
+                const asistieron = asistencias.filter(a => a.asistio === true).length;
+                const noAsistieron = asistencias.filter(a => a.asistio === false).length;
+
+                return `
+                    <tr>
+                        <td>${formatDate(clase.fecha)}</td>
+                        <td>${totalAlumnos}</td>
+                        <td><span class="badge badge-success">${asistieron}</span></td>
+                        <td><span class="badge badge-danger">${noAsistieron}</span></td>
+                        <td>
+                            <button onclick="editClase(${clase.id}, '${clase.fecha}')" class="btn btn-primary" style="width: auto; padding: 0.5rem 1rem; font-size: 0.875rem;">
+                                Editar
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }));
+
+            tbody.innerHTML = rows.join('');
+        }
+
+        // Generar clase de hoy
+        document.getElementById('btnGenerateToday').addEventListener('click', async () => {
+            const today = new Date().toISOString().split('T')[0];
+
+            // Verificar si ya existe
+            const existingClase = await fetchClaseByFecha(today);
+            if (existingClase) {
+                showMessage('message', 'error', 'Ya existe una clase para el día de hoy');
+                return;
+            }
+
+            try {
+                await generateClaseFromConfirmations(today);
+                showMessage('message', 'success', '¡Clase generada exitosamente!');
+                await loadHistorial();
+            } catch (error) {
+                showMessage('message', 'error', 'Error generando clase');
+            }
+        });
+
+        // Editar clase
+        async function editClase(claseId, fecha) {
+            currentClaseId = claseId;
+            claseAsistencias = await fetchClaseAsistencias(claseId);
+
+            // Obtener confirmaciones de los padres
+            const confirmaciones = await supabaseRequest(`asistencia?select=alumno_dni,presente&fecha=eq.${fecha}`);
+
+            document.getElementById('modalTitle').textContent = `Clase del ${formatDate(fecha)}`;
+
+            const modalBody = document.getElementById('modalTableBody');
+
+            // Obtener todos los alumnos y combinar con asistencias
+            const rows = allAlumnos.map(alumno => {
+                const asistencia = claseAsistencias.find(a => a.alumno_dni === alumno.dni);
+                const confirmacion = confirmaciones.find(c => c.alumno_dni === alumno.dni);
+
+                let confirmText = '-';
+                if (confirmacion) {
+                    confirmText = confirmacion.presente === 'si' ?
+                        '<span class="badge badge-success">Sí</span>' :
+                        '<span class="badge badge-danger">No</span>';
+                }
+
+                let asistioValue = asistencia ? (asistencia.asistio ? 'true' : 'false') : 'null';
+
+                return `
+                    <tr>
+                        <td>${alumno.nombre_completo}</td>
+                        <td>${confirmText}</td>
+                        <td>
+                            <select class="select" data-dni="${alumno.dni}" style="width: auto;">
+                                <option value="null" ${asistioValue === 'null' ? 'selected' : ''}>Sin registrar</option>
+                                <option value="true" ${asistioValue === 'true' ? 'selected' : ''}>✓ Asistió</option>
+                                <option value="false" ${asistioValue === 'false' ? 'selected' : ''}>✗ No asistió</option>
+                            </select>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            modalBody.innerHTML = rows.join('');
+            document.getElementById('modalEditClase').style.display = 'block';
+        }
+
+        // Guardar cambios de clase
+        document.getElementById('btnSaveClase').addEventListener('click', async () => {
+            const selects = document.querySelectorAll('#modalTableBody select');
+
+            const updates = Array.from(selects).map(select => {
+                const dni = parseInt(select.getAttribute('data-dni'));
+                const value = select.value;
+
+                if (value === 'null') return null;
+
+                return upsertClaseAsistencia(currentClaseId, dni, value === 'true');
+            }).filter(p => p !== null);
+
+            try {
+                await Promise.all(updates);
+                showMessage('message', 'success', 'Cambios guardados exitosamente');
+                document.getElementById('modalEditClase').style.display = 'none';
+                await loadHistorial();
+            } catch (error) {
+                showMessage('message', 'error', 'Error guardando cambios');
+            }
+        });
+
+        // Cerrar modal
+        document.getElementById('btnCloseModal').addEventListener('click', () => {
+            document.getElementById('modalEditClase').style.display = 'none';
+        });
+
+        document.getElementById('btnCancelModal').addEventListener('click', () => {
+            document.getElementById('modalEditClase').style.display = 'none';
+        });
+
+        // Cerrar modal al hacer click fuera
+        document.getElementById('modalEditClase').addEventListener('click', (e) => {
+            if (e.target.id === 'modalEditClase') {
+                document.getElementById('modalEditClase').style.display = 'none';
+            }
+        });
     </script>
 </body>
 </html>
