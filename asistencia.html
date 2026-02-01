@@ -33,15 +33,15 @@
             <div class="form-group space-y">
                 <label class="label">Busca y selecciona al alumno</label>
                 <input
-                    type="text"
+                    type="search"
                     id="alumnoInput"
                     class="input"
                     placeholder="Escribe el nombre del alumno..."
                     list="alumnosList"
-                    autocomplete="off"
                 >
                 <datalist id="alumnosList">
                 </datalist>
+                <p id="alumnosCount" class="info-text" style="margin-top:0.5rem;">Cargando alumnos...</p>
                 <input type="hidden" id="alumnoDNI">
             </div>
 
@@ -87,19 +87,26 @@
         async function loadAlumnos() {
             try {
                 alumnosData = await fetchAlumnos();
+                console.log('Alumnos cargados:', alumnosData ? alumnosData.length : 0);
                 updateDatalist(alumnosData);
+                const countEl = document.getElementById('alumnosCount');
+                if (countEl) countEl.textContent = alumnosData && alumnosData.length ? `${alumnosData.length} alumnos cargados` : 'No se encontraron alumnos';
             } catch (error) {
                 showMessage('message', 'error', 'Error cargando alumnos');
+                const countEl = document.getElementById('alumnosCount');
+                if (countEl) countEl.textContent = 'Error cargando alumnos';
+                console.error('Error loadAlumnos:', error);
             }
         }
 
         // Actualizar datalist con alumnos
         function updateDatalist(alumnos) {
             alumnosList.innerHTML = '';
+            if (!alumnos || alumnos.length === 0) return;
             alumnos.forEach(alumno => {
                 const option = document.createElement('option');
-                option.value = alumno.nombre_completo;
-                option.setAttribute('data-dni', alumno.dni);
+                option.value = alumno.nombre_completo || alumno.nombre || '';
+                option.setAttribute('data-dni', alumno.dni || alumno.dni_alumno || '');
                 alumnosList.appendChild(option);
             });
         }
@@ -107,17 +114,28 @@
         // Manejar cambio en el input
         alumnoInput.addEventListener('input', () => {
             const inputValue = alumnoInput.value;
-            const selectedAlumno = alumnosData.find(a => a.nombre_completo === inputValue);
+            // Intentar encontrar por datos cargados
+            const selectedAlumno = alumnosData.find(a => (a.nombre_completo || a.nombre) === inputValue);
 
             if (selectedAlumno) {
-                alumnoDNI.value = selectedAlumno.dni;
+                alumnoDNI.value = selectedAlumno.dni || selectedAlumno.dni_alumno || '';
                 btnAsiste.disabled = false;
                 btnNoAsiste.disabled = false;
-            } else {
-                alumnoDNI.value = '';
-                btnAsiste.disabled = true;
-                btnNoAsiste.disabled = true;
+                return;
             }
+
+            // Fallback: buscar en las opciones del datalist (por si el nombre viene formateado diferente)
+            const opt = Array.from(alumnosList.options).find(o => o.value === inputValue);
+            if (opt && opt.dataset && opt.dataset.dni) {
+                alumnoDNI.value = opt.dataset.dni;
+                btnAsiste.disabled = false;
+                btnNoAsiste.disabled = false;
+                return;
+            }
+
+            alumnoDNI.value = '';
+            btnAsiste.disabled = true;
+            btnNoAsiste.disabled = true;
         });
 
         // Limpiar input al hacer blur si no hay selección válida
