@@ -38,27 +38,35 @@ function getNextSaturday() {
 
 /**
  * Calcula el próximo domingo desde hoy
+ * Hasta las 20:00 del domingo, se mantiene el domingo actual
+ * Después de las 20:00 del domingo, se considera el próximo domingo
  * @returns {string} Fecha en formato ISO (YYYY-MM-DD)
  */
 function getNextSunday() {
     // Usar fecha local sin conversión UTC
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Normalizar a medianoche
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0 = Domingo, 1 = Lunes, ..., 6 = Sábado
+    const hour = now.getHours();
 
-    const dayOfWeek = today.getDay(); // 0 = Domingo, 1 = Lunes, ..., 6 = Sábado
-
-    // Calcular días hasta el próximo domingo
     let daysUntilSunday;
+    
     if (dayOfWeek === 0) {
-        // Si hoy es domingo, el próximo es en 7 días
-        daysUntilSunday = 7;
+        // Si hoy es domingo
+        if (hour < 20) {
+            // Antes de las 20:00, el domingo actual es la clase
+            daysUntilSunday = 0;
+        } else {
+            // Después de las 20:00, el próximo domingo es en 7 días
+            daysUntilSunday = 7;
+        }
     } else {
         // Para cualquier otro día, calcular días restantes hasta domingo
         daysUntilSunday = 7 - dayOfWeek;
     }
 
-    const nextSun = new Date(today);
-    nextSun.setDate(today.getDate() + daysUntilSunday);
+    const nextSun = new Date(now);
+    nextSun.setHours(0, 0, 0, 0);
+    nextSun.setDate(now.getDate() + daysUntilSunday);
 
     // Formatear manualmente para evitar problemas de zona horaria
     const year = nextSun.getFullYear();
