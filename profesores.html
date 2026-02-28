@@ -5,6 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel Profesores - Escuela Multiclubes</title>
     <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .pago-group {
+            display: inline-flex;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            border: 1.5px solid #d1d5db;
+        }
+        .pago-btn-si, .pago-btn-no {
+            padding: 0.5rem 0.75rem;
+            border: none;
+            background: #f9fafb;
+            color: #9ca3af;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            min-width: 2.75rem;
+            min-height: 2.75rem;
+            line-height: 1;
+            transition: background 0.15s, color 0.15s;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .pago-btn-si { border-right: 1px solid #d1d5db; }
+        .pago-si-active { background: #d1fae5 !important; color: #065f46 !important; }
+        .pago-no-active { background: #fee2e2 !important; color: #991b1b !important; }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -103,11 +129,12 @@
                                 <th>Total Alumnos</th>
                                 <th>Asistieron</th>
                                 <th>No Asistieron</th>
+                                <th>Pagaron</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="historyTableBody">
-                            <tr><td colspan="5">Cargando...</td></tr>
+                            <tr><td colspan="6">Cargando...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -128,6 +155,7 @@
                                             <th>Alumno</th>
                                             <th>Confirmó</th>
                                             <th>Asistió</th>
+                                            <th>Pagó</th>
                                         </tr>
                                     </thead>
                                     <tbody id="modalTableBody">
@@ -431,6 +459,7 @@
                 const totalAlumnos = asistencias.length;
                 const asistieron = asistencias.filter(a => a.asistio === true).length;
                 const noAsistieron = asistencias.filter(a => a.asistio === false).length;
+                const pagaron = asistencias.filter(a => a.pago === true).length;
 
                 return `
                     <tr>
@@ -438,6 +467,7 @@
                         <td>${totalAlumnos}</td>
                         <td><span class="badge badge-success">${asistieron}</span></td>
                         <td><span class="badge badge-danger">${noAsistieron}</span></td>
+                        <td><span class="badge" style="background:#dbeafe;color:#1e40af;">💰 ${pagaron}</span></td>
                         <td>
                             <button onclick="editClase(${clase.id}, '${clase.fecha}')" class="btn btn-primary" style="width: auto; padding: 0.5rem 1rem; font-size: 0.875rem;">
                                 Editar
@@ -495,6 +525,9 @@
                 }
 
                 let asistioValue = asistencia ? (asistencia.asistio ? 'true' : 'false') : 'null';
+                let pagoValue = asistencia
+                    ? (asistencia.pago === true ? 'true' : asistencia.pago === false ? 'false' : 'null')
+                    : 'null';
 
                 return `
                     <tr>
@@ -507,6 +540,18 @@
                                 <option value="false" ${asistioValue === 'false' ? 'selected' : ''}>✗ No asistió</option>
                             </select>
                         </td>
+                        <td>
+                            <div class="pago-group" data-pago="${pagoValue}">
+                                <button type="button"
+                                    class="pago-btn-si${pagoValue === 'true' ? ' pago-si-active' : ''}"
+                                    onclick="togglePago(this.parentElement, 'true')"
+                                    title="Pagó">✓</button>
+                                <button type="button"
+                                    class="pago-btn-no${pagoValue === 'false' ? ' pago-no-active' : ''}"
+                                    onclick="togglePago(this.parentElement, 'false')"
+                                    title="No pagó">✗</button>
+                            </div>
+                        </td>
                     </tr>
                 `;
             });
@@ -515,17 +560,34 @@
             document.getElementById('modalEditClase').style.display = 'block';
         }
 
+        // Alternar estado de pago (✓ pagó / ✗ no pagó / sin selección)
+        function togglePago(group, value) {
+            const current = group.getAttribute('data-pago');
+            const newValue = current === value ? 'null' : value;
+            group.setAttribute('data-pago', newValue);
+            group.querySelector('.pago-btn-si').classList.toggle('pago-si-active', newValue === 'true');
+            group.querySelector('.pago-btn-no').classList.toggle('pago-no-active', newValue === 'false');
+        }
+
         // Guardar cambios de clase
         document.getElementById('btnSaveClase').addEventListener('click', async () => {
-            const selects = document.querySelectorAll('#modalTableBody select');
+            const rows = document.querySelectorAll('#modalTableBody tr');
 
-            const updates = Array.from(selects).map(select => {
+            const updates = Array.from(rows).map(row => {
+                const select = row.querySelector('select');
+                const pagoGroup = row.querySelector('.pago-group');
+                if (!select || !pagoGroup) return null;
+
                 const dni = parseInt(select.getAttribute('data-dni'));
-                const value = select.value;
+                const asistioValue = select.value;
+                const pagoValue = pagoGroup.getAttribute('data-pago');
 
-                if (value === 'null') return null;
+                const asistio = asistioValue === 'null' ? null : asistioValue === 'true';
+                const pago = pagoValue === 'null' ? null : pagoValue === 'true';
 
-                return upsertClaseAsistencia(currentClaseId, dni, value === 'true');
+                if (asistio === null && pago === null) return null;
+
+                return upsertClaseAsistencia(currentClaseId, dni, asistio, pago);
             }).filter(p => p !== null);
 
             try {

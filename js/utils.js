@@ -241,9 +241,10 @@ async function fetchClaseAsistencias(claseId) {
  * @param {number} claseId - ID de la clase
  * @param {number} alumnoDni - DNI del alumno
  * @param {boolean} asistio - Si asistió o no
+ * @param {boolean|null} pago - Si pagó (true), no pagó (false), o sin registrar (null)
  * @returns {Promise<Response>} Respuesta de la petición
  */
-async function upsertClaseAsistencia(claseId, alumnoDni, asistio) {
+async function upsertClaseAsistencia(claseId, alumnoDni, asistio, pago) {
     return await fetch(`${SUPABASE_URL}/rest/v1/clase_asistencias`, {
         method: 'POST',
         headers: {
@@ -255,7 +256,8 @@ async function upsertClaseAsistencia(claseId, alumnoDni, asistio) {
         body: JSON.stringify({
             clase_id: claseId,
             alumno_dni: alumnoDni,
-            asistio: asistio
+            asistio: asistio,
+            pago: pago
         })
     });
 }
