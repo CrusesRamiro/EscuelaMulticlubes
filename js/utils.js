@@ -237,13 +237,14 @@ async function fetchClaseAsistencias(claseId) {
 }
 
 /**
- * Actualiza solo el campo pago de un registro en clase_asistencias (sin tocar asistio)
+ * Actualiza solo los campos pago/pago2 de un registro en clase_asistencias (sin tocar asistio)
  * @param {number} claseId - ID de la clase
  * @param {number} alumnoDni - DNI del alumno
- * @param {boolean|null} pago - Si pagó (true), no pagó (false), o sin registrar (null)
+ * @param {boolean|null} pago - Pagó 1hs (true) o no (null)
+ * @param {boolean|null} pago2 - Pagó 2hs (true) o no (null)
  * @returns {Promise<Response>} Respuesta de la petición
  */
-async function upsertPagoAsistencia(claseId, alumnoDni, pago) {
+async function upsertPagoAsistencia(claseId, alumnoDni, pago, pago2) {
     return await fetch(`${SUPABASE_URL}/rest/v1/clase_asistencias`, {
         method: 'POST',
         headers: {
@@ -255,7 +256,8 @@ async function upsertPagoAsistencia(claseId, alumnoDni, pago) {
         body: JSON.stringify({
             clase_id: claseId,
             alumno_dni: alumnoDni,
-            pago: pago
+            pago: pago,
+            pago2: pago2
         })
     });
 }
@@ -265,10 +267,11 @@ async function upsertPagoAsistencia(claseId, alumnoDni, pago) {
  * @param {number} claseId - ID de la clase
  * @param {number} alumnoDni - DNI del alumno
  * @param {boolean} asistio - Si asistió o no
- * @param {boolean|null} pago - Si pagó (true), no pagó (false), o sin registrar (null)
+ * @param {boolean|null} pago - Pagó 1hs (true) o no (null)
+ * @param {boolean|null} pago2 - Pagó 2hs (true) o no (null)
  * @returns {Promise<Response>} Respuesta de la petición
  */
-async function upsertClaseAsistencia(claseId, alumnoDni, asistio, pago) {
+async function upsertClaseAsistencia(claseId, alumnoDni, asistio, pago, pago2) {
     return await fetch(`${SUPABASE_URL}/rest/v1/clase_asistencias`, {
         method: 'POST',
         headers: {
@@ -281,7 +284,8 @@ async function upsertClaseAsistencia(claseId, alumnoDni, asistio, pago) {
             clase_id: claseId,
             alumno_dni: alumnoDni,
             asistio: asistio,
-            pago: pago
+            pago: pago,
+            pago2: pago2
         })
     });
 }

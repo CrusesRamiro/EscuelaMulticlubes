@@ -12,12 +12,12 @@
             overflow: hidden;
             border: 1.5px solid #d1d5db;
         }
-        .pago-btn-si, .pago-btn-no {
-            padding: 0.5rem 0.75rem;
+        .pago-btn-1hs, .pago-btn-2hs {
+            padding: 0.4rem 0.65rem;
             border: none;
             background: #f9fafb;
             color: #9ca3af;
-            font-size: 1rem;
+            font-size: 0.8rem;
             font-weight: 700;
             cursor: pointer;
             min-width: 2.75rem;
@@ -27,9 +27,9 @@
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
         }
-        .pago-btn-si { border-right: 1px solid #d1d5db; }
-        .pago-si-active { background: #d1fae5 !important; color: #065f46 !important; }
-        .pago-no-active { background: #fee2e2 !important; color: #991b1b !important; }
+        .pago-btn-1hs { border-right: 1px solid #d1d5db; }
+        .pago-1hs-active { background: #d1fae5 !important; color: #065f46 !important; }
+        .pago-2hs-active { background: #dbeafe !important; color: #1e40af !important; }
     </style>
 </head>
 <body>
@@ -390,8 +390,8 @@
                 }
 
                 const pagoExistente = currentSessionPagos.find(p => p.alumno_dni === alumno.dni);
-                const pagoValue = pagoExistente
-                    ? (pagoExistente.pago === true ? 'true' : pagoExistente.pago === false ? 'false' : 'null')
+                const pagoTipo = pagoExistente
+                    ? (pagoExistente.pago === true ? '1hs' : pagoExistente.pago2 === true ? '2hs' : 'null')
                     : 'null';
 
                 return `
@@ -401,15 +401,15 @@
                         <td title="${equipDetail}" style="cursor: help;">${equipSummary}</td>
                         <td>${badge}</td>
                         <td>
-                            <div class="pago-group" data-pago="${pagoValue}" data-dni="${alumno.dni}">
+                            <div class="pago-group" data-pago-tipo="${pagoTipo}" data-dni="${alumno.dni}">
                                 <button type="button"
-                                    class="pago-btn-si${pagoValue === 'true' ? ' pago-si-active' : ''}"
-                                    onclick="togglePagoProximaClase(this.parentElement, 'true')"
-                                    title="Pagó">✓</button>
+                                    class="pago-btn-1hs${pagoTipo === '1hs' ? ' pago-1hs-active' : ''}"
+                                    onclick="togglePagoProximaClase(this.parentElement, '1hs')"
+                                    title="Pagó 1 hora">1hs</button>
                                 <button type="button"
-                                    class="pago-btn-no${pagoValue === 'false' ? ' pago-no-active' : ''}"
-                                    onclick="togglePagoProximaClase(this.parentElement, 'false')"
-                                    title="No pagó">✗</button>
+                                    class="pago-btn-2hs${pagoTipo === '2hs' ? ' pago-2hs-active' : ''}"
+                                    onclick="togglePagoProximaClase(this.parentElement, '2hs')"
+                                    title="Pagó 2 horas">2hs</button>
                             </div>
                         </td>
                     </tr>
@@ -496,7 +496,8 @@
                 const totalAlumnos = asistencias.length;
                 const asistieron = asistencias.filter(a => a.asistio === true).length;
                 const noAsistieron = asistencias.filter(a => a.asistio === false).length;
-                const pagaron = asistencias.filter(a => a.pago === true).length;
+                const pagaron1hs = asistencias.filter(a => a.pago === true).length;
+                const pagaron2hs = asistencias.filter(a => a.pago2 === true).length;
 
                 return `
                     <tr>
@@ -504,7 +505,10 @@
                         <td>${totalAlumnos}</td>
                         <td><span class="badge badge-success">${asistieron}</span></td>
                         <td><span class="badge badge-danger">${noAsistieron}</span></td>
-                        <td><span class="badge" style="background:#dbeafe;color:#1e40af;">💰 ${pagaron}</span></td>
+                        <td style="white-space: nowrap;">
+                            <span class="badge" style="background:#d1fae5;color:#065f46;">1hs: ${pagaron1hs}</span>
+                            <span class="badge" style="background:#dbeafe;color:#1e40af;">2hs: ${pagaron2hs}</span>
+                        </td>
                         <td>
                             <button onclick="editClase(${clase.id}, '${clase.fecha}')" class="btn btn-primary" style="width: auto; padding: 0.5rem 1rem; font-size: 0.875rem;">
                                 Editar
@@ -562,8 +566,8 @@
                 }
 
                 let asistioValue = asistencia ? (asistencia.asistio ? 'true' : 'false') : 'null';
-                let pagoValue = asistencia
-                    ? (asistencia.pago === true ? 'true' : asistencia.pago === false ? 'false' : 'null')
+                let pagoTipo = asistencia
+                    ? (asistencia.pago === true ? '1hs' : asistencia.pago2 === true ? '2hs' : 'null')
                     : 'null';
 
                 return `
@@ -578,15 +582,15 @@
                             </select>
                         </td>
                         <td>
-                            <div class="pago-group" data-pago="${pagoValue}">
+                            <div class="pago-group" data-pago-tipo="${pagoTipo}">
                                 <button type="button"
-                                    class="pago-btn-si${pagoValue === 'true' ? ' pago-si-active' : ''}"
-                                    onclick="togglePago(this.parentElement, 'true')"
-                                    title="Pagó">✓</button>
+                                    class="pago-btn-1hs${pagoTipo === '1hs' ? ' pago-1hs-active' : ''}"
+                                    onclick="togglePago(this.parentElement, '1hs')"
+                                    title="Pagó 1 hora">1hs</button>
                                 <button type="button"
-                                    class="pago-btn-no${pagoValue === 'false' ? ' pago-no-active' : ''}"
-                                    onclick="togglePago(this.parentElement, 'false')"
-                                    title="No pagó">✗</button>
+                                    class="pago-btn-2hs${pagoTipo === '2hs' ? ' pago-2hs-active' : ''}"
+                                    onclick="togglePago(this.parentElement, '2hs')"
+                                    title="Pagó 2 horas">2hs</button>
                             </div>
                         </td>
                     </tr>
@@ -598,15 +602,15 @@
         }
 
         // Toggle de pago en "Próxima Clase" — guarda inmediatamente en la DB
-        async function togglePagoProximaClase(group, value) {
+        async function togglePagoProximaClase(group, tipo) {
             const alumnoDni = parseInt(group.getAttribute('data-dni'));
-            const current = group.getAttribute('data-pago');
-            const newValue = current === value ? 'null' : value;
+            const current = group.getAttribute('data-pago-tipo');
+            const newTipo = current === tipo ? 'null' : tipo;
 
             // Actualizar UI de inmediato
-            group.setAttribute('data-pago', newValue);
-            group.querySelector('.pago-btn-si').classList.toggle('pago-si-active', newValue === 'true');
-            group.querySelector('.pago-btn-no').classList.toggle('pago-no-active', newValue === 'false');
+            group.setAttribute('data-pago-tipo', newTipo);
+            group.querySelector('.pago-btn-1hs').classList.toggle('pago-1hs-active', newTipo === '1hs');
+            group.querySelector('.pago-btn-2hs').classList.toggle('pago-2hs-active', newTipo === '2hs');
 
             // Si no existe la clase aún, crearla primero
             if (!currentSessionClaseId) {
@@ -619,21 +623,22 @@
                 }
             }
 
-            const pago = newValue === 'null' ? null : newValue === 'true';
+            const pago = newTipo === '1hs' ? true : null;
+            const pago2 = newTipo === '2hs' ? true : null;
             try {
-                await upsertPagoAsistencia(currentSessionClaseId, alumnoDni, pago);
+                await upsertPagoAsistencia(currentSessionClaseId, alumnoDni, pago, pago2);
             } catch (error) {
                 showMessage('message', 'error', 'Error guardando pago');
             }
         }
 
-        // Alternar estado de pago en modal (✓ pagó / ✗ no pagó / sin selección)
-        function togglePago(group, value) {
-            const current = group.getAttribute('data-pago');
-            const newValue = current === value ? 'null' : value;
-            group.setAttribute('data-pago', newValue);
-            group.querySelector('.pago-btn-si').classList.toggle('pago-si-active', newValue === 'true');
-            group.querySelector('.pago-btn-no').classList.toggle('pago-no-active', newValue === 'false');
+        // Alternar estado de pago en modal (1hs / 2hs / sin selección) — mutuamente excluyentes
+        function togglePago(group, tipo) {
+            const current = group.getAttribute('data-pago-tipo');
+            const newTipo = current === tipo ? 'null' : tipo;
+            group.setAttribute('data-pago-tipo', newTipo);
+            group.querySelector('.pago-btn-1hs').classList.toggle('pago-1hs-active', newTipo === '1hs');
+            group.querySelector('.pago-btn-2hs').classList.toggle('pago-2hs-active', newTipo === '2hs');
         }
 
         // Guardar cambios de clase
@@ -647,14 +652,15 @@
 
                 const dni = parseInt(select.getAttribute('data-dni'));
                 const asistioValue = select.value;
-                const pagoValue = pagoGroup.getAttribute('data-pago');
+                const pagoTipo = pagoGroup.getAttribute('data-pago-tipo');
 
                 const asistio = asistioValue === 'null' ? null : asistioValue === 'true';
-                const pago = pagoValue === 'null' ? null : pagoValue === 'true';
+                const pago = pagoTipo === '1hs' ? true : null;
+                const pago2 = pagoTipo === '2hs' ? true : null;
 
-                if (asistio === null && pago === null) return null;
+                if (asistio === null && pagoTipo === 'null') return null;
 
-                return upsertClaseAsistencia(currentClaseId, dni, asistio, pago);
+                return upsertClaseAsistencia(currentClaseId, dni, asistio, pago, pago2);
             }).filter(p => p !== null);
 
             try {
