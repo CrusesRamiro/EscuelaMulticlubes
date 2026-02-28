@@ -104,10 +104,11 @@
                                 <th>Edad</th>
                                 <th>Equipación</th>
                                 <th>Estado</th>
+                                <th>Pagó</th>
                             </tr>
                         </thead>
                         <tbody id="attendanceTableBody">
-                            <tr><td colspan="4">Cargando...</td></tr>
+                            <tr><td colspan="5">Cargando...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -234,6 +235,8 @@
         let clases = [];
         let currentClaseId = null;
         let claseAsistencias = [];
+        let currentSessionClaseId = null;
+        let currentSessionPagos = [];
 
         // Login
         loginForm.addEventListener('submit', async (e) => {
@@ -314,9 +317,26 @@
             document.getElementById('nextSessionDateAdmin').textContent = formatDate(nextSessionDate);
 
             await loadAlumnos();
-            await loadAttendance();
+            await Promise.all([loadAttendance(), loadProximaClasePagos()]);
             renderAttendanceTable();
             renderAllAlumnosTable();
+        }
+
+        // Cargar pagos registrados para la próxima clase
+        async function loadProximaClasePagos() {
+            try {
+                const clase = await fetchClaseByFecha(nextSessionDate);
+                if (clase) {
+                    currentSessionClaseId = clase.id;
+                    currentSessionPagos = await fetchClaseAsistencias(clase.id);
+                } else {
+                    currentSessionClaseId = null;
+                    currentSessionPagos = [];
+                }
+            } catch (error) {
+                currentSessionClaseId = null;
+                currentSessionPagos = [];
+            }
         }
 
         // Cargar alumnos
@@ -350,7 +370,7 @@
             const tbody = document.getElementById('attendanceTableBody');
 
             if (allAlumnos.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4">No hay alumnos registrados</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5">No hay alumnos registrados</td></tr>';
                 return;
             }
 
@@ -369,12 +389,29 @@
                     badge = '<span class="badge badge-warning">Sin confirmar</span>';
                 }
 
+                const pagoExistente = currentSessionPagos.find(p => p.alumno_dni === alumno.dni);
+                const pagoValue = pagoExistente
+                    ? (pagoExistente.pago === true ? 'true' : pagoExistente.pago === false ? 'false' : 'null')
+                    : 'null';
+
                 return `
                     <tr>
                         <td>${alumno.nombre_completo}</td>
                         <td>${age}</td>
                         <td title="${equipDetail}" style="cursor: help;">${equipSummary}</td>
                         <td>${badge}</td>
+                        <td>
+                            <div class="pago-group" data-pago="${pagoValue}" data-dni="${alumno.dni}">
+                                <button type="button"
+                                    class="pago-btn-si${pagoValue === 'true' ? ' pago-si-active' : ''}"
+                                    onclick="togglePagoProximaClase(this.parentElement, 'true')"
+                                    title="Pagó">✓</button>
+                                <button type="button"
+                                    class="pago-btn-no${pagoValue === 'false' ? ' pago-no-active' : ''}"
+                                    onclick="togglePagoProximaClase(this.parentElement, 'false')"
+                                    title="No pagó">✗</button>
+                            </div>
+                        </td>
                     </tr>
                 `;
             }).join('');
@@ -560,7 +597,37 @@
             document.getElementById('modalEditClase').style.display = 'block';
         }
 
-        // Alternar estado de pago (✓ pagó / ✗ no pagó / sin selección)
+        // Toggle de pago en "Próxima Clase" — guarda inmediatamente en la DB
+        async function togglePagoProximaClase(group, value) {
+            const alumnoDni = parseInt(group.getAttribute('data-dni'));
+            const current = group.getAttribute('data-pago');
+            const newValue = current === value ? 'null' : value;
+
+            // Actualizar UI de inmediato
+            group.setAttribute('data-pago', newValue);
+            group.querySelector('.pago-btn-si').classList.toggle('pago-si-active', newValue === 'true');
+            group.querySelector('.pago-btn-no').classList.toggle('pago-no-active', newValue === 'false');
+
+            // Si no existe la clase aún, crearla primero
+            if (!currentSessionClaseId) {
+                try {
+                    const clase = await createClase(nextSessionDate);
+                    currentSessionClaseId = clase.id;
+                } catch (error) {
+                    showMessage('message', 'error', 'Error creando registro de clase');
+                    return;
+                }
+            }
+
+            const pago = newValue === 'null' ? null : newValue === 'true';
+            try {
+                await upsertPagoAsistencia(currentSessionClaseId, alumnoDni, pago);
+            } catch (error) {
+                showMessage('message', 'error', 'Error guardando pago');
+            }
+        }
+
+        // Alternar estado de pago en modal (✓ pagó / ✗ no pagó / sin selección)
         function togglePago(group, value) {
             const current = group.getAttribute('data-pago');
             const newValue = current === value ? 'null' : value;

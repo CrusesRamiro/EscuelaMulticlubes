@@ -237,6 +237,30 @@ async function fetchClaseAsistencias(claseId) {
 }
 
 /**
+ * Actualiza solo el campo pago de un registro en clase_asistencias (sin tocar asistio)
+ * @param {number} claseId - ID de la clase
+ * @param {number} alumnoDni - DNI del alumno
+ * @param {boolean|null} pago - Si pagó (true), no pagó (false), o sin registrar (null)
+ * @returns {Promise<Response>} Respuesta de la petición
+ */
+async function upsertPagoAsistencia(claseId, alumnoDni, pago) {
+    return await fetch(`${SUPABASE_URL}/rest/v1/clase_asistencias`, {
+        method: 'POST',
+        headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'resolution=merge-duplicates,return=minimal'
+        },
+        body: JSON.stringify({
+            clase_id: claseId,
+            alumno_dni: alumnoDni,
+            pago: pago
+        })
+    });
+}
+
+/**
  * Crea o actualiza la asistencia de un alumno en una clase
  * @param {number} claseId - ID de la clase
  * @param {number} alumnoDni - DNI del alumno
