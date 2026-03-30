@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evento - Escuela Multiclubes</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="card header card-padding">
+            <h1 class="title" id="eventoTitulo">🏒 Evento</h1>
+            <p class="subtitle" id="eventoSubtitulo">Confirma tu asistencia al evento</p>
+        </div>
+
+        <div id="message" style="display: none;"></div>
+
+        <div class="card card-padding">
+            <a href="index.html" style="display: inline-flex; align-items: center; gap: 0.5rem; color: #4f46e5; text-decoration: none; margin-bottom: 1.5rem;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                Volver al inicio
+            </a>
+
+            <div id="errorEvento" style="display: none;" class="alert alert-error">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                <span>Evento no encontrado. Volvé al inicio y seleccioná un evento válido.</span>
+            </div>
+
+            <div id="contenidoEvento">
+                <div class="info-box">
+                    <p class="info-text">
+                        Evento: <strong id="eventoNombre">Cargando...</strong>
+                    </p>
+                </div>
+
+                <div class="form-group space-y">
+                    <label class="label">Busca y selecciona al alumno</label>
+                    <input
+                        type="search"
+                        id="alumnoInput"
+                        class="input"
+                        placeholder="Escribe el nombre del alumno..."
+                        list="alumnosList"
+                    >
+                    <datalist id="alumnosList"></datalist>
+                    <p id="alumnosCount" class="info-text" style="margin-top:0.5rem;">Cargando alumnos...</p>
+                    <input type="hidden" id="alumnoDNI">
+                </div>
+
+                <div class="grid-2 space-y">
+                    <button id="btnAsiste" class="btn btn-success" disabled>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
+                        <span>Sí Asiste</span>
+                    </button>
+                    <button id="btnNoAsiste" class="btn btn-danger" disabled>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                        <span>No Asiste</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script>
+        let eventoId = '';
+        let eventoNombre = '';
+        let alumnosData = [];
+        const alumnoInput = document.getElementById('alumnoInput');
+        const alumnosList = document.getElementById('alumnosList');
+        const alumnoDNI = document.getElementById('alumnoDNI');
+        const btnAsiste = document.getElementById('btnAsiste');
+        const btnNoAsiste = document.getElementById('btnNoAsiste');
+
+        async function init() {
+            const params = new URLSearchParams(window.location.search);
+            eventoId = params.get('id') || '';
+            eventoNombre = params.get('nombre') || '';
+
+            if (!eventoId || !eventoNombre) {
+                document.getElementById('contenidoEvento').style.display = 'none';
+                document.getElementById('errorEvento').style.display = 'flex';
+                return;
+            }
+
+            document.title = `${eventoNombre} - Escuela Multiclubes`;
+            document.getElementById('eventoTitulo').textContent = `🏒 ${eventoNombre}`;
+            document.getElementById('eventoNombre').textContent = eventoNombre;
+
+            await loadAlumnos();
+        }
+
+        async function loadAlumnos() {
+            try {
+                alumnosData = await fetchAlumnos();
+                updateDatalist(alumnosData);
+                const countEl = document.getElementById('alumnosCount');
+                if (countEl) countEl.textContent = alumnosData && alumnosData.length ? `${alumnosData.length} alumnos cargados` : 'No se encontraron alumnos';
+            } catch (error) {
+                showMessage('message', 'error', 'Error cargando alumnos');
+                const countEl = document.getElementById('alumnosCount');
+                if (countEl) countEl.textContent = 'Error cargando alumnos';
+            }
+        }
+
+        function updateDatalist(alumnos) {
+            alumnosList.innerHTML = '';
+            if (!alumnos || alumnos.length === 0) return;
+            alumnos.forEach(alumno => {
+                const option = document.createElement('option');
+                option.value = alumno.nombre_completo || alumno.nombre || '';
+                option.setAttribute('data-dni', alumno.dni || alumno.dni_alumno || '');
+                alumnosList.appendChild(option);
+            });
+        }
+
+        alumnoInput.addEventListener('input', () => {
+            const inputValue = alumnoInput.value;
+            const selectedAlumno = alumnosData.find(a => (a.nombre_completo || a.nombre) === inputValue);
+
+            if (selectedAlumno) {
+                alumnoDNI.value = selectedAlumno.dni || selectedAlumno.dni_alumno || '';
+                btnAsiste.disabled = false;
+                btnNoAsiste.disabled = false;
+                return;
+            }
+
+            const opt = Array.from(alumnosList.options).find(o => o.value === inputValue);
+            if (opt && opt.dataset && opt.dataset.dni) {
+                alumnoDNI.value = opt.dataset.dni;
+                btnAsiste.disabled = false;
+                btnNoAsiste.disabled = false;
+                return;
+            }
+
+            alumnoDNI.value = '';
+            btnAsiste.disabled = true;
+            btnNoAsiste.disabled = true;
+        });
+
+        alumnoInput.addEventListener('blur', () => {
+            setTimeout(() => {
+                if (!alumnoDNI.value) {
+                    alumnoInput.value = '';
+                }
+            }, 200);
+        });
+
+        async function handleAttendance(presente) {
+            const alumno_dni = parseInt(alumnoDNI.value);
+
+            if (!alumno_dni) {
+                showMessage('message', 'error', 'Por favor selecciona un alumno');
+                return;
+            }
+
+            btnAsiste.disabled = true;
+            btnNoAsiste.disabled = true;
+
+            try {
+                const data = {
+                    alumno_dni: alumno_dni,
+                    evento_id: eventoId,
+                    presente: presente
+                };
+
+                const response = await supabaseRequest('evento_asistencia', 'POST', data);
+
+                if (response.ok) {
+                    showMessage('message', 'success',
+                        `Registrado: ${presente === 'si' ? 'Asistirá' : 'No asistirá'} al evento`);
+                    alumnoInput.value = '';
+                    alumnoDNI.value = '';
+                } else {
+                    showMessage('message', 'error',
+                        'Error al registrar. Puede que ya hayas confirmado para este evento.');
+                }
+            } catch (error) {
+                showMessage('message', 'error', 'Error de conexión con el servidor');
+            } finally {
+                btnAsiste.disabled = !alumnoDNI.value;
+                btnNoAsiste.disabled = !alumnoDNI.value;
+            }
+        }
+
+        btnAsiste.addEventListener('click', () => handleAttendance('si'));
+        btnNoAsiste.addEventListener('click', () => handleAttendance('no'));
+
+        init();
+    </script>
+</body>
+</html>
