@@ -86,6 +86,8 @@
                 <button id="tabAttendance" class="admin-tab active">Próxima Clase</button>
                 <button id="tabHistory" class="admin-tab">Historial</button>
                 <button id="tabAll" class="admin-tab">Todos los Alumnos</button>
+                <button id="tabTorneo" class="admin-tab">🏆 Torneo Mayo</button>
+                <button id="tabCopa" class="admin-tab">🌍 Copa Ushuaia</button>
             </div>
 
             <!-- Próxima Clase View -->
@@ -182,6 +184,50 @@
                 </div>
             </div>
 
+            <!-- Torneo de Menores Mayo View -->
+            <div id="viewTorneo" style="display: none;">
+                <div class="info-box">
+                    <p class="info-text">Confirmaciones para: <strong>Torneo de Menores Mayo</strong></p>
+                </div>
+                <div class="table-container space-y">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Alumno</th>
+                                <th>Edad</th>
+                                <th>Club</th>
+                                <th>Respuesta</th>
+                            </tr>
+                        </thead>
+                        <tbody id="torneoTableBody">
+                            <tr><td colspan="4">Cargando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Copa Fin del Mundo Ushuaia 2026 View -->
+            <div id="viewCopa" style="display: none;">
+                <div class="info-box">
+                    <p class="info-text">Confirmaciones para: <strong>Copa Fin del Mundo Ushuaia 2026 Menores</strong></p>
+                </div>
+                <div class="table-container space-y">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Alumno</th>
+                                <th>Edad</th>
+                                <th>Club</th>
+                                <th>Respuesta</th>
+                            </tr>
+                        </thead>
+                        <tbody id="copaTableBody">
+                            <tr><td colspan="4">Cargando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- Todos los Alumnos View -->
             <div id="viewAll" style="display: none;">
                 <div class="table-container space-y">
@@ -225,9 +271,16 @@
         const tabAttendance = document.getElementById('tabAttendance');
         const tabHistory = document.getElementById('tabHistory');
         const tabAll = document.getElementById('tabAll');
+        const tabTorneo = document.getElementById('tabTorneo');
+        const tabCopa = document.getElementById('tabCopa');
         const viewAttendance = document.getElementById('viewAttendance');
         const viewHistory = document.getElementById('viewHistory');
         const viewAll = document.getElementById('viewAll');
+        const viewTorneo = document.getElementById('viewTorneo');
+        const viewCopa = document.getElementById('viewCopa');
+
+        const ALL_TABS = [tabAttendance, tabHistory, tabAll, tabTorneo, tabCopa];
+        const ALL_VIEWS = [viewAttendance, viewHistory, viewAll, viewTorneo, viewCopa];
 
         let nextSessionDate = '';
         let allAlumnos = [];
@@ -283,32 +336,30 @@
         });
 
         // Tabs
-        tabAttendance.addEventListener('click', () => {
-            tabAttendance.classList.add('active');
-            tabHistory.classList.remove('active');
-            tabAll.classList.remove('active');
-            viewAttendance.style.display = 'block';
-            viewHistory.style.display = 'none';
-            viewAll.style.display = 'none';
-        });
+        function switchTab(activeTab, activeView) {
+            ALL_TABS.forEach(t => t.classList.remove('active'));
+            ALL_VIEWS.forEach(v => v.style.display = 'none');
+            activeTab.classList.add('active');
+            activeView.style.display = 'block';
+        }
+
+        tabAttendance.addEventListener('click', () => switchTab(tabAttendance, viewAttendance));
 
         tabHistory.addEventListener('click', async () => {
-            tabHistory.classList.add('active');
-            tabAttendance.classList.remove('active');
-            tabAll.classList.remove('active');
-            viewHistory.style.display = 'block';
-            viewAttendance.style.display = 'none';
-            viewAll.style.display = 'none';
+            switchTab(tabHistory, viewHistory);
             await loadHistorial();
         });
 
-        tabAll.addEventListener('click', () => {
-            tabAll.classList.add('active');
-            tabAttendance.classList.remove('active');
-            tabHistory.classList.remove('active');
-            viewAll.style.display = 'block';
-            viewAttendance.style.display = 'none';
-            viewHistory.style.display = 'none';
+        tabAll.addEventListener('click', () => switchTab(tabAll, viewAll));
+
+        tabTorneo.addEventListener('click', async () => {
+            switchTab(tabTorneo, viewTorneo);
+            await renderEventoTable('torneo-menores-mayo', 'torneoTableBody');
+        });
+
+        tabCopa.addEventListener('click', async () => {
+            switchTab(tabCopa, viewCopa);
+            await renderEventoTable('copa-fin-mundo-ushuaia-2026', 'copaTableBody');
         });
 
         // Cargar datos del admin
@@ -712,6 +763,47 @@
                 document.getElementById('modalEditClase').style.display = 'none';
             }
         });
+
+        // ========== EVENTOS EXTRACURRICULARES ==========
+
+        async function renderEventoTable(eventoId, tbodyId) {
+            const tbody = document.getElementById(tbodyId);
+            tbody.innerHTML = '<tr><td colspan="4">Cargando...</td></tr>';
+
+            try {
+                const confirmaciones = await supabaseRequest(
+                    `evento_asistencia?select=alumno_dni,presente&evento_id=eq.${eventoId}`
+                );
+
+                if (!confirmaciones || confirmaciones.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4">Nadie confirmó asistencia todavía</td></tr>';
+                    return;
+                }
+
+                const rows = confirmaciones.map(conf => {
+                    const alumno = allAlumnos.find(a => a.dni === conf.alumno_dni);
+                    const nombre = alumno ? alumno.nombre_completo : `DNI ${conf.alumno_dni}`;
+                    const edad = alumno ? (calculateAge(alumno.fecha_nac) || '-') : '-';
+                    const club = alumno?.clubes?.nombre || '-';
+                    const badge = conf.presente === 'si'
+                        ? '<span class="badge badge-success">Asiste</span>'
+                        : '<span class="badge badge-danger">No Asiste</span>';
+
+                    return `
+                        <tr>
+                            <td>${nombre}</td>
+                            <td>${edad}</td>
+                            <td>${club}</td>
+                            <td>${badge}</td>
+                        </tr>
+                    `;
+                });
+
+                tbody.innerHTML = rows.join('');
+            } catch (error) {
+                tbody.innerHTML = '<tr><td colspan="4">Error cargando datos</td></tr>';
+            }
+        }
     </script>
 </body>
 </html>
