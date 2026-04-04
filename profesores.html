@@ -280,6 +280,14 @@
 
             <!-- Todos los Alumnos View -->
             <div id="viewAll" style="display: none;">
+                <div style="display:flex; gap:0.75rem; align-items:center; margin-bottom:0.75rem; flex-wrap:wrap; padding:0.25rem 0;">
+                    <div style="display:flex; align-items:center; gap:0.4rem;">
+                        <label style="font-size:0.875rem; font-weight:600; color:#374151;">Edad:</label>
+                        <input type="number" id="filterAllAgeMin" placeholder="Min" min="0" max="99" oninput="renderAllAlumnosTable()" style="width:4.5rem; padding:0.3rem 0.5rem; border:1px solid #d1d5db; border-radius:0.375rem; font-size:0.875rem;">
+                        <span style="color:#6b7280; font-size:0.875rem;">–</span>
+                        <input type="number" id="filterAllAgeMax" placeholder="Max" min="0" max="99" oninput="renderAllAlumnosTable()" style="width:4.5rem; padding:0.3rem 0.5rem; border:1px solid #d1d5db; border-radius:0.375rem; font-size:0.875rem;">
+                    </div>
+                </div>
                 <div class="table-container space-y">
                     <table class="table">
                         <thead>
@@ -555,7 +563,24 @@
                 return;
             }
 
-            tbody.innerHTML = allAlumnos.map(alumno => {
+            const ageMinEl = document.getElementById('filterAllAgeMin');
+            const ageMaxEl = document.getElementById('filterAllAgeMax');
+            const ageMin = ageMinEl && ageMinEl.value !== '' ? parseInt(ageMinEl.value) : null;
+            const ageMax = ageMaxEl && ageMaxEl.value !== '' ? parseInt(ageMaxEl.value) : null;
+
+            const source = allAlumnos.filter(alumno => {
+                const age = calculateAge(alumno.fecha_nac);
+                if (ageMin !== null && (age === null || age < ageMin)) return false;
+                if (ageMax !== null && (age === null || age > ageMax)) return false;
+                return true;
+            });
+
+            if (source.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="15">No hay alumnos que coincidan con los filtros</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = source.map(alumno => {
                 const fechaNac = alumno.fecha_nac ?
                     new Date(alumno.fecha_nac).toLocaleDateString('es-ES') : '-';
                 const edad = calculateAge(alumno.fecha_nac) || '-';
