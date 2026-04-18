@@ -581,8 +581,10 @@
             }
 
             tbody.innerHTML = source.map(alumno => {
-                const fechaNac = alumno.fecha_nac ?
-                    new Date(alumno.fecha_nac).toLocaleDateString('es-ES') : '-';
+                const fechaNac = alumno.fecha_nac ? (() => {
+                    const [y, m, d] = alumno.fecha_nac.split('-').map(Number);
+                    return new Date(y, m - 1, d).toLocaleDateString('es-ES');
+                })() : '-';
                 const edad = calculateAge(alumno.fecha_nac) || '-';
                 const club = alumno.clubes?.nombre || '-';
 
