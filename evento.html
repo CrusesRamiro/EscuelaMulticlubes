@@ -47,7 +47,7 @@
                     >
                     <datalist id="alumnosList"></datalist>
                     <p id="alumnosCount" class="info-text" style="margin-top:0.5rem;">Cargando alumnos...</p>
-                    <input type="hidden" id="alumnoDNI">
+                    <input type="hidden" id="alumnoId">
                 </div>
 
                 <div class="grid-2 space-y">
@@ -74,36 +74,43 @@
     <script src="js/config.js"></script>
     <script src="js/utils.js"></script>
     <script>
-        let eventoId = '';
-        let eventoNombre = '';
+        let eventoSlug = '';
         let alumnosData = [];
         const alumnoInput = document.getElementById('alumnoInput');
         const alumnosList = document.getElementById('alumnosList');
-        const alumnoDNI = document.getElementById('alumnoDNI');
+        const alumnoId = document.getElementById('alumnoId');
         const btnAsiste = document.getElementById('btnAsiste');
         const btnNoAsiste = document.getElementById('btnNoAsiste');
 
         async function init() {
             const params = new URLSearchParams(window.location.search);
-            eventoId = params.get('id') || '';
-            eventoNombre = params.get('nombre') || '';
+            eventoSlug = params.get('slug') || '';
 
-            if (!eventoId || !eventoNombre) {
+            let evento = null;
+            if (eventoSlug) {
+                try {
+                    evento = await fetchEvento(eventoSlug);
+                } catch (error) {
+                    evento = null;
+                }
+            }
+
+            if (!evento) {
                 document.getElementById('contenidoEvento').style.display = 'none';
                 document.getElementById('errorEvento').style.display = 'flex';
                 return;
             }
 
-            document.title = `${eventoNombre} - Escuela Multiclubes`;
-            document.getElementById('eventoTitulo').textContent = `🏒 ${eventoNombre}`;
-            document.getElementById('eventoNombre').textContent = eventoNombre;
+            document.title = `${evento.nombre} - Escuela Multiclubes`;
+            document.getElementById('eventoTitulo').textContent = `🏒 ${evento.nombre}`;
+            document.getElementById('eventoNombre').textContent = evento.nombre;
 
             await loadAlumnos();
         }
 
         async function loadAlumnos() {
             try {
-                alumnosData = await fetchAlumnos();
+                alumnosData = await fetchAlumnosPublico();
                 updateDatalist(alumnosData);
                 const countEl = document.getElementById('alumnosCount');
                 if (countEl) countEl.textContent = alumnosData && alumnosData.length ? `${alumnosData.length} alumnos cargados` : 'No se encontraron alumnos';
@@ -119,48 +126,46 @@
             if (!alumnos || alumnos.length === 0) return;
             alumnos.forEach(alumno => {
                 const option = document.createElement('option');
-                option.value = alumno.nombre_completo || alumno.nombre || '';
-                option.setAttribute('data-dni', alumno.dni || alumno.dni_alumno || '');
+                option.value = alumno.nombre_completo;
+                option.setAttribute('data-id', alumno.id);
                 alumnosList.appendChild(option);
             });
         }
 
         alumnoInput.addEventListener('input', () => {
             const inputValue = alumnoInput.value;
-            const selectedAlumno = alumnosData.find(a => (a.nombre_completo || a.nombre) === inputValue);
+            const selectedAlumno = alumnosData.find(a => a.nombre_completo === inputValue);
 
             if (selectedAlumno) {
-                alumnoDNI.value = selectedAlumno.dni || selectedAlumno.dni_alumno || '';
+                alumnoId.value = selectedAlumno.id;
                 btnAsiste.disabled = false;
                 btnNoAsiste.disabled = false;
                 return;
             }
 
             const opt = Array.from(alumnosList.options).find(o => o.value === inputValue);
-            if (opt && opt.dataset && opt.dataset.dni) {
-                alumnoDNI.value = opt.dataset.dni;
+            if (opt && opt.dataset && opt.dataset.id) {
+                alumnoId.value = opt.dataset.id;
                 btnAsiste.disabled = false;
                 btnNoAsiste.disabled = false;
                 return;
             }
 
-            alumnoDNI.value = '';
+            alumnoId.value = '';
             btnAsiste.disabled = true;
             btnNoAsiste.disabled = true;
         });
 
         alumnoInput.addEventListener('blur', () => {
             setTimeout(() => {
-                if (!alumnoDNI.value) {
+                if (!alumnoId.value) {
                     alumnoInput.value = '';
                 }
             }, 200);
         });
 
         async function handleAttendance(presente) {
-            const alumno_dni = parseInt(alumnoDNI.value);
-
-            if (!alumno_dni) {
+            if (!alumnoId.value) {
                 showMessage('message', 'error', 'Por favor selecciona un alumno');
                 return;
             }
@@ -169,33 +174,21 @@
             btnNoAsiste.disabled = true;
 
             try {
-                const data = {
-                    alumno_dni: alumno_dni,
-                    evento_id: eventoId,
-                    presente: presente
-                };
-
-                const response = await supabaseRequest('evento_asistencia', 'POST', data);
-
-                if (response.ok) {
-                    showMessage('message', 'success',
-                        `Registrado: ${presente === 'si' ? 'Asistirá' : 'No asistirá'} al evento`);
-                    alumnoInput.value = '';
-                    alumnoDNI.value = '';
-                } else {
-                    showMessage('message', 'error',
-                        'Error al registrar. Puede que ya hayas confirmado para este evento.');
-                }
+                await confirmarAsistencia(parseInt(alumnoId.value), eventoSlug, presente);
+                showMessage('message', 'success',
+                    `Registrado: ${presente ? 'Asistirá' : 'No asistirá'} al evento`);
+                alumnoInput.value = '';
+                alumnoId.value = '';
             } catch (error) {
-                showMessage('message', 'error', 'Error de conexión con el servidor');
+                showMessage('message', 'error', 'Error al registrar. Intentá de nuevo.');
             } finally {
-                btnAsiste.disabled = !alumnoDNI.value;
-                btnNoAsiste.disabled = !alumnoDNI.value;
+                btnAsiste.disabled = !alumnoId.value;
+                btnNoAsiste.disabled = !alumnoId.value;
             }
         }
 
-        btnAsiste.addEventListener('click', () => handleAttendance('si'));
-        btnNoAsiste.addEventListener('click', () => handleAttendance('no'));
+        btnAsiste.addEventListener('click', () => handleAttendance(true));
+        btnNoAsiste.addEventListener('click', () => handleAttendance(false));
 
         init();
     </script>

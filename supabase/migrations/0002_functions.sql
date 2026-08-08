@@ -86,11 +86,20 @@ grant execute on function rpc_listar_eventos_activos() to anon, authenticated;
 -- Sirve tanto para el evento recurrente (clase semanal) como para eventos
 -- únicos (torneo, copa, etc: usan eventos.fecha_unica). Devuelve también
 -- la fecha para que el caller no tenga que volver a calcularla.
+--
+-- El parámetro de salida se llama sesion_fecha (no "fecha"): un OUT
+-- parameter que se llama igual que una columna real de la tabla que se
+-- inserta (sesiones.fecha) hace que Postgres tire "column reference
+-- ambiguous" apenas la función necesita hacer el INSERT (plpgsql
+-- resuelve identificadores contra sus variables/OUT params en cualquier
+-- posición del texto SQL, no solo en expresiones) — se descubrió corriendo
+-- el flujo completo en un navegador real contra una sesión que todavía no
+-- existía.
 -- ============================================================
 drop function if exists obtener_o_crear_sesion(text);
 
 create function obtener_o_crear_sesion(p_evento_slug text)
-returns table (id bigint, fecha date)
+returns table (id bigint, sesion_fecha date)
 language plpgsql
 security definer
 set search_path = public
@@ -116,8 +125,12 @@ begin
     if v_sesion_id is null then
         insert into sesiones (evento_id, fecha)
         values (v_evento.id, v_fecha)
-        on conflict (evento_id, fecha) do update set fecha = excluded.fecha
+        on conflict (evento_id, fecha) do nothing
         returning sesiones.id into v_sesion_id;
+
+        if v_sesion_id is null then
+            select s.id into v_sesion_id from sesiones s where s.evento_id = v_evento.id and s.fecha = v_fecha;
+        end if;
     end if;
 
     return query select v_sesion_id, v_fecha;

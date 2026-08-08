@@ -76,22 +76,25 @@
 
         <!-- Admin Panel Section -->
         <div id="adminSection" class="card card-padding" style="display: none;">
-            <button id="logoutBtn" class="btn btn-danger" style="width: auto; margin-bottom: 1rem;">
-                Cerrar Sesión
-            </button>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                <span id="profesorNombreEtiqueta" style="font-size:0.875rem; color:#6b7280;"></span>
+                <button id="logoutBtn" class="btn btn-danger" style="width: auto;">
+                    Cerrar Sesión
+                </button>
+            </div>
 
             <h3>Panel de Profesores</h3>
 
-            <div class="admin-tabs">
-                <button id="tabAttendance" class="admin-tab active">Próxima Clase</button>
-                <button id="tabHistory" class="admin-tab">Historial</button>
-                <button id="tabAll" class="admin-tab">Todos los Alumnos</button>
-                <button id="tabTorneo" class="admin-tab">🏆 Torneo Mayo</button>
-                <button id="tabCopa" class="admin-tab">🌍 Copa Ushuaia</button>
+            <div class="admin-tabs" id="adminTabs">
+                <button id="tabAttendance" class="admin-tab active" data-view="viewAttendance">Próxima Clase</button>
+                <button id="tabHistory" class="admin-tab" data-view="viewHistory">Historial</button>
+                <button id="tabAll" class="admin-tab" data-view="viewAll">Todos los Alumnos</button>
+                <!-- Los tabs de eventos custom (Torneo, Copa, etc) se agregan acá en runtime,
+                     uno por cada fila activa en la tabla eventos — ver cargarTabsEventos(). -->
             </div>
 
             <!-- Próxima Clase View -->
-            <div id="viewAttendance">
+            <div id="viewAttendance" class="admin-view">
                 <div class="info-box">
                     <p class="info-text">
                         Próxima sesión: <strong id="nextSessionDateAdmin">Cargando...</strong>
@@ -135,13 +138,7 @@
             </div>
 
             <!-- Historial View -->
-            <div id="viewHistory" style="display: none;">
-                <div style="margin-bottom: 1rem;">
-                    <button id="btnGenerateToday" class="btn btn-primary" style="width: auto;">
-                        Generar Clase de Hoy
-                    </button>
-                </div>
-
+            <div id="viewHistory" class="admin-view" style="display: none;">
                 <div class="table-container space-y">
                     <table class="table">
                         <thead>
@@ -202,84 +199,8 @@
                 </div>
             </div>
 
-            <!-- Torneo de Menores Mayo View -->
-            <div id="viewTorneo" style="display: none;">
-                <div class="info-box">
-                    <p class="info-text">Confirmaciones para: <strong>Torneo de Menores Mayo</strong></p>
-                </div>
-                <div style="display:flex; gap:0.75rem; align-items:center; margin-bottom:0.75rem; flex-wrap:wrap; padding:0.25rem 0;">
-                    <div style="display:flex; align-items:center; gap:0.4rem;">
-                        <label style="font-size:0.875rem; font-weight:600; color:#374151;">Edad:</label>
-                        <input type="number" id="filterTorneoAgeMin" placeholder="Min" min="0" max="99" oninput="applyEventoFilters('torneo-menores-mayo', 'torneoTableBody')" style="width:4.5rem; padding:0.3rem 0.5rem; border:1px solid #d1d5db; border-radius:0.375rem; font-size:0.875rem;">
-                        <span style="color:#6b7280; font-size:0.875rem;">–</span>
-                        <input type="number" id="filterTorneoAgeMax" placeholder="Max" min="0" max="99" oninput="applyEventoFilters('torneo-menores-mayo', 'torneoTableBody')" style="width:4.5rem; padding:0.3rem 0.5rem; border:1px solid #d1d5db; border-radius:0.375rem; font-size:0.875rem;">
-                    </div>
-                    <div style="display:flex; align-items:center; gap:0.4rem;">
-                        <label style="font-size:0.875rem; font-weight:600; color:#374151;">Respuesta:</label>
-                        <select id="filterTorneoStatus" onchange="applyEventoFilters('torneo-menores-mayo', 'torneoTableBody')" style="padding:0.3rem 0.5rem; border:1px solid #d1d5db; border-radius:0.375rem; font-size:0.875rem; background:white; color:#374151;">
-                            <option value="">Todos</option>
-                            <option value="si">Asiste</option>
-                            <option value="no">No Asiste</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="table-container space-y">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Alumno</th>
-                                <th>Edad</th>
-                                <th>Club</th>
-                                <th>Respuesta</th>
-                            </tr>
-                        </thead>
-                        <tbody id="torneoTableBody">
-                            <tr><td colspan="4">Cargando...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Copa Fin del Mundo Ushuaia 2026 View -->
-            <div id="viewCopa" style="display: none;">
-                <div class="info-box">
-                    <p class="info-text">Confirmaciones para: <strong>Copa Fin del Mundo Ushuaia 2026 Menores</strong></p>
-                </div>
-                <div style="display:flex; gap:0.75rem; align-items:center; margin-bottom:0.75rem; flex-wrap:wrap; padding:0.25rem 0;">
-                    <div style="display:flex; align-items:center; gap:0.4rem;">
-                        <label style="font-size:0.875rem; font-weight:600; color:#374151;">Edad:</label>
-                        <input type="number" id="filterCopaAgeMin" placeholder="Min" min="0" max="99" oninput="applyEventoFilters('copa-fin-mundo-ushuaia-2026', 'copaTableBody')" style="width:4.5rem; padding:0.3rem 0.5rem; border:1px solid #d1d5db; border-radius:0.375rem; font-size:0.875rem;">
-                        <span style="color:#6b7280; font-size:0.875rem;">–</span>
-                        <input type="number" id="filterCopaAgeMax" placeholder="Max" min="0" max="99" oninput="applyEventoFilters('copa-fin-mundo-ushuaia-2026', 'copaTableBody')" style="width:4.5rem; padding:0.3rem 0.5rem; border:1px solid #d1d5db; border-radius:0.375rem; font-size:0.875rem;">
-                    </div>
-                    <div style="display:flex; align-items:center; gap:0.4rem;">
-                        <label style="font-size:0.875rem; font-weight:600; color:#374151;">Respuesta:</label>
-                        <select id="filterCopaStatus" onchange="applyEventoFilters('copa-fin-mundo-ushuaia-2026', 'copaTableBody')" style="padding:0.3rem 0.5rem; border:1px solid #d1d5db; border-radius:0.375rem; font-size:0.875rem; background:white; color:#374151;">
-                            <option value="">Todos</option>
-                            <option value="si">Asiste</option>
-                            <option value="no">No Asiste</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="table-container space-y">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Alumno</th>
-                                <th>Edad</th>
-                                <th>Club</th>
-                                <th>Respuesta</th>
-                            </tr>
-                        </thead>
-                        <tbody id="copaTableBody">
-                            <tr><td colspan="4">Cargando...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
             <!-- Todos los Alumnos View -->
-            <div id="viewAll" style="display: none;">
+            <div id="viewAll" class="admin-view" style="display: none;">
                 <div style="display:flex; gap:0.75rem; align-items:center; margin-bottom:0.75rem; flex-wrap:wrap; padding:0.25rem 0;">
                     <div style="display:flex; align-items:center; gap:0.4rem;">
                         <label style="font-size:0.875rem; font-weight:600; color:#374151;">Edad:</label>
@@ -315,6 +236,45 @@
                     </table>
                 </div>
             </div>
+
+            <!-- Evento custom (Torneo, Copa, etc) View — genérica, reutilizada para
+                 cualquier evento tipo 'unico'. Ver cargarTabsEventos()/switchToEvento(). -->
+            <div id="viewEvento" class="admin-view" style="display: none;">
+                <div class="info-box">
+                    <p class="info-text">Confirmaciones para: <strong id="eventoViewNombre"></strong></p>
+                </div>
+                <div style="display:flex; gap:0.75rem; align-items:center; margin-bottom:0.75rem; flex-wrap:wrap; padding:0.25rem 0;">
+                    <div style="display:flex; align-items:center; gap:0.4rem;">
+                        <label style="font-size:0.875rem; font-weight:600; color:#374151;">Edad:</label>
+                        <input type="number" id="filterEventoAgeMin" placeholder="Min" min="0" max="99" oninput="renderEventoTable()" style="width:4.5rem; padding:0.3rem 0.5rem; border:1px solid #d1d5db; border-radius:0.375rem; font-size:0.875rem;">
+                        <span style="color:#6b7280; font-size:0.875rem;">–</span>
+                        <input type="number" id="filterEventoAgeMax" placeholder="Max" min="0" max="99" oninput="renderEventoTable()" style="width:4.5rem; padding:0.3rem 0.5rem; border:1px solid #d1d5db; border-radius:0.375rem; font-size:0.875rem;">
+                    </div>
+                    <div style="display:flex; align-items:center; gap:0.4rem;">
+                        <label style="font-size:0.875rem; font-weight:600; color:#374151;">Respuesta:</label>
+                        <select id="filterEventoStatus" onchange="renderEventoTable()" style="padding:0.3rem 0.5rem; border:1px solid #d1d5db; border-radius:0.375rem; font-size:0.875rem; background:white; color:#374151;">
+                            <option value="">Todos</option>
+                            <option value="si">Asiste</option>
+                            <option value="no">No Asiste</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-container space-y">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Alumno</th>
+                                <th>Edad</th>
+                                <th>Club</th>
+                                <th>Respuesta</th>
+                            </tr>
+                        </thead>
+                        <tbody id="eventoTableBody">
+                            <tr><td colspan="4">Cargando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -330,27 +290,24 @@
         const tabAttendance = document.getElementById('tabAttendance');
         const tabHistory = document.getElementById('tabHistory');
         const tabAll = document.getElementById('tabAll');
-        const tabTorneo = document.getElementById('tabTorneo');
-        const tabCopa = document.getElementById('tabCopa');
         const viewAttendance = document.getElementById('viewAttendance');
         const viewHistory = document.getElementById('viewHistory');
         const viewAll = document.getElementById('viewAll');
-        const viewTorneo = document.getElementById('viewTorneo');
-        const viewCopa = document.getElementById('viewCopa');
-
-        const ALL_TABS = [tabAttendance, tabHistory, tabAll, tabTorneo, tabCopa];
-        const ALL_VIEWS = [viewAttendance, viewHistory, viewAll, viewTorneo, viewCopa];
+        const viewEvento = document.getElementById('viewEvento');
 
         let nextSessionDate = '';
         let allAlumnos = [];
-        let attendanceData = [];
-        let clases = [];
-        let currentClaseId = null;
-        let claseAsistencias = [];
-        let currentSessionClaseId = null;
-        let currentSessionPagos = [];
-        let torneoData = [];
-        let copaData = [];
+        let currentSessionId = null;        // sesiones.id de la próxima clase semanal
+        let currentSessionAsistencias = [];
+        let historialSesiones = [];
+        let currentSesionIdModal = null;    // sesión que se está editando en el modal
+        let currentEventoSlug = null;       // evento activo en viewEvento
+        let currentEventoConfirmaciones = [];
+
+        // Si ya había un JWT guardado (recarga de página en la misma pestaña), entrar directo
+        if (isProfesorLoggedIn()) {
+            mostrarPanelAdmin();
+        }
 
         // Login
         loginForm.addEventListener('submit', async (e) => {
@@ -363,20 +320,11 @@
             loginBtn.innerHTML = '<span>Verificando...</span>';
 
             try {
-                const profesores = await supabaseRequest(
-                    `profesores?select=*&nombre=eq.${encodeURIComponent(username)}&password=eq.${encodeURIComponent(password)}&activo=eq.true`
-                );
-
-                if (profesores && profesores.length > 0) {
-                    showMessage('message', 'success', `¡Bienvenido/a, ${profesores[0].nombre}!`);
-                    loginSection.style.display = 'none';
-                    adminSection.style.display = 'block';
-                    await loadAdminData();
-                } else {
-                    showMessage('message', 'error', 'Usuario o contraseña incorrectos');
-                }
+                await loginProfesor(username, password);
+                showMessage('message', 'success', `¡Bienvenido/a, ${getProfesorNombre()}!`);
+                await mostrarPanelAdmin();
             } catch (error) {
-                showMessage('message', 'error', 'Error de conexión con el servidor');
+                showMessage('message', 'error', 'Usuario o contraseña incorrectos');
             } finally {
                 loginBtn.disabled = false;
                 loginBtn.innerHTML = `
@@ -391,17 +339,25 @@
 
         // Logout
         logoutBtn.addEventListener('click', () => {
+            logoutProfesor();
             adminSection.style.display = 'none';
             loginSection.style.display = 'block';
             loginForm.reset();
         });
 
-        // Tabs
-        function switchTab(activeTab, activeView) {
-            ALL_TABS.forEach(t => t.classList.remove('active'));
-            ALL_VIEWS.forEach(v => v.style.display = 'none');
-            activeTab.classList.add('active');
-            activeView.style.display = 'block';
+        async function mostrarPanelAdmin() {
+            document.getElementById('profesorNombreEtiqueta').textContent = getProfesorNombre();
+            loginSection.style.display = 'none';
+            adminSection.style.display = 'block';
+            await loadAdminData();
+        }
+
+        // Tabs (genérico: cualquier botón .admin-tab con data-view apunta a un .admin-view)
+        function switchTab(tabEl, viewEl) {
+            document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.admin-view').forEach(v => v.style.display = 'none');
+            tabEl.classList.add('active');
+            viewEl.style.display = 'block';
         }
 
         tabAttendance.addEventListener('click', () => switchTab(tabAttendance, viewAttendance));
@@ -413,71 +369,53 @@
 
         tabAll.addEventListener('click', () => switchTab(tabAll, viewAll));
 
-        tabTorneo.addEventListener('click', async () => {
-            switchTab(tabTorneo, viewTorneo);
-            await renderEventoTable('torneo-menores-mayo', 'torneoTableBody');
-        });
-
-        tabCopa.addEventListener('click', async () => {
-            switchTab(tabCopa, viewCopa);
-            await renderEventoTable('copa-fin-mundo-ushuaia-2026', 'copaTableBody');
-        });
-
         // Cargar datos del admin
         async function loadAdminData() {
-            nextSessionDate = getNextSunday();
-            document.getElementById('nextSessionDateAdmin').textContent = formatDate(nextSessionDate);
-
             await loadAlumnos();
-            await Promise.all([loadAttendance(), loadProximaClasePagos()]);
+            await loadProximaClase();
             renderAttendanceTable();
             renderAllAlumnosTable();
+            await cargarTabsEventos();
         }
 
-        // Cargar pagos registrados para la próxima clase
-        async function loadProximaClasePagos() {
-            try {
-                const clase = await fetchClaseByFecha(nextSessionDate);
-                if (clase) {
-                    currentSessionClaseId = clase.id;
-                    currentSessionPagos = await fetchClaseAsistencias(clase.id);
-                } else {
-                    currentSessionClaseId = null;
-                    currentSessionPagos = [];
-                }
-            } catch (error) {
-                currentSessionClaseId = null;
-                currentSessionPagos = [];
-            }
-        }
-
-        // Cargar alumnos
+        // Alumnos (lectura completa: requiere login)
         async function loadAlumnos() {
             try {
-                allAlumnos = await fetchAlumnos();
+                allAlumnos = await fetchAlumnosCompleto();
             } catch (error) {
                 showMessage('message', 'error', 'Error cargando alumnos');
             }
         }
 
-        // Cargar asistencia
-        async function loadAttendance() {
+        // Próxima clase semanal: fecha + sesión (si ya existe) + sus asistencias
+        async function loadProximaClase() {
             try {
-                attendanceData = await supabaseRequest(
-                    `asistencia?select=alumno_dni,presente&fecha=eq.${nextSessionDate}`
-                );
+                nextSessionDate = await fetchProximaFecha('clase-semanal');
+                document.getElementById('nextSessionDateAdmin').textContent = formatDate(nextSessionDate);
+
+                const sesion = await fetchSesionPorFecha('clase-semanal', nextSessionDate);
+                if (sesion) {
+                    currentSessionId = sesion.id;
+                    currentSessionAsistencias = await fetchAsistenciasPorSesion(sesion.id);
+                } else {
+                    currentSessionId = null;
+                    currentSessionAsistencias = [];
+                }
             } catch (error) {
-                showMessage('message', 'error', 'Error cargando asistencia');
+                currentSessionId = null;
+                currentSessionAsistencias = [];
+                showMessage('message', 'error', 'Error cargando la próxima clase');
             }
         }
 
-        // Obtener estado de asistencia de un alumno
-        function getAttendanceStatus(dni) {
-            const attendance = attendanceData.find(a => a.alumno_dni === dni);
-            return attendance ? attendance.presente : 'No confirmado';
+        // Estado de confirmación de un alumno para la próxima clase
+        function getAttendanceStatus(alumnoId) {
+            const a = currentSessionAsistencias.find(x => x.alumno_id === alumnoId);
+            if (!a || a.confirmacion_padre === null || a.confirmacion_padre === undefined) return 'No confirmado';
+            return a.confirmacion_padre ? 'si' : 'no';
         }
 
-        // Renderizar tabla de asistencia
+        // Renderizar tabla de asistencia (próxima clase)
         function renderAttendanceTable() {
             const tbody = document.getElementById('attendanceTableBody');
 
@@ -494,11 +432,11 @@
             const statusFilter = statusEl ? statusEl.value : '';
 
             const filtered = allAlumnos.filter(alumno => {
-                const age = calculateAge(alumno.fecha_nac);
+                const age = calculateAge(alumno.fecha_nacimiento);
                 if (ageMin !== null && (age === null || age < ageMin)) return false;
                 if (ageMax !== null && (age === null || age > ageMax)) return false;
                 if (statusFilter) {
-                    const status = getAttendanceStatus(alumno.dni);
+                    const status = getAttendanceStatus(alumno.id);
                     if (statusFilter === 'si' && status !== 'si') return false;
                     if (statusFilter === 'no' && status !== 'no') return false;
                     if (statusFilter === 'no-confirmado' && status !== 'No confirmado') return false;
@@ -512,10 +450,10 @@
             }
 
             tbody.innerHTML = filtered.map(alumno => {
-                const status = getAttendanceStatus(alumno.dni);
-                const age = calculateAge(alumno.fecha_nac) || '-';
-                const equipSummary = getEquipmentSummary(alumno);
-                const equipDetail = getEquipmentDetail(alumno);
+                const status = getAttendanceStatus(alumno.id);
+                const age = calculateAge(alumno.fecha_nacimiento) || '-';
+                const equipSummary = getEquipmentSummary(alumno.equipamiento);
+                const equipDetail = getEquipmentDetail(alumno.equipamiento);
 
                 let badge = '';
                 if (status === 'si') {
@@ -526,10 +464,8 @@
                     badge = '<span class="badge badge-warning">Sin confirmar</span>';
                 }
 
-                const pagoExistente = currentSessionPagos.find(p => p.alumno_dni === alumno.dni);
-                const pagoTipo = pagoExistente
-                    ? (pagoExistente.pago === true ? '1hs' : pagoExistente.pago2 === true ? '2hs' : 'null')
-                    : 'null';
+                const pagoExistente = currentSessionAsistencias.find(p => p.alumno_id === alumno.id);
+                const pagoTipo = pagoExistente && pagoExistente.pago_tipo ? pagoExistente.pago_tipo : 'null';
 
                 return `
                     <tr>
@@ -538,7 +474,7 @@
                         <td title="${equipDetail}" style="cursor: help;">${equipSummary}</td>
                         <td>${badge}</td>
                         <td>
-                            <div class="pago-group" data-pago-tipo="${pagoTipo}" data-dni="${alumno.dni}">
+                            <div class="pago-group" data-pago-tipo="${pagoTipo}" data-id="${alumno.id}">
                                 <button type="button"
                                     class="pago-btn-1hs${pagoTipo === '1hs' ? ' pago-1hs-active' : ''}"
                                     onclick="togglePagoProximaClase(this.parentElement, '1hs')"
@@ -569,7 +505,7 @@
             const ageMax = ageMaxEl && ageMaxEl.value !== '' ? parseInt(ageMaxEl.value) : null;
 
             const source = allAlumnos.filter(alumno => {
-                const age = calculateAge(alumno.fecha_nac);
+                const age = calculateAge(alumno.fecha_nacimiento);
                 if (ageMin !== null && (age === null || age < ageMin)) return false;
                 if (ageMax !== null && (age === null || age > ageMax)) return false;
                 return true;
@@ -581,12 +517,13 @@
             }
 
             tbody.innerHTML = source.map(alumno => {
-                const fechaNac = alumno.fecha_nac ? (() => {
-                    const [y, m, d] = alumno.fecha_nac.split('-').map(Number);
+                const fechaNac = alumno.fecha_nacimiento ? (() => {
+                    const [y, m, d] = alumno.fecha_nacimiento.split('-').map(Number);
                     return new Date(y, m - 1, d).toLocaleDateString('es-ES');
                 })() : '-';
-                const edad = calculateAge(alumno.fecha_nac) || '-';
+                const edad = calculateAge(alumno.fecha_nacimiento) || '-';
                 const club = alumno.clubes?.nombre || '-';
+                const eq = alumno.equipamiento || {};
 
                 return `
                     <tr>
@@ -595,14 +532,14 @@
                         <td>${fechaNac}</td>
                         <td>${edad}</td>
                         <td>${club}</td>
-                        <td style="text-align: center;">${alumno.casco ? '✓' : '✗'}</td>
-                        <td style="text-align: center;">${alumno.patines ? '✓' : '✗'}</td>
-                        <td style="text-align: center;">${alumno.guantes ? '✓' : '✗'}</td>
-                        <td style="text-align: center;">${alumno.palo ? '✓' : '✗'}</td>
-                        <td style="text-align: center;">${alumno.pads ? '✓' : '✗'}</td>
-                        <td style="text-align: center;">${alumno.pants ? '✓' : '✗'}</td>
-                        <td style="text-align: center;">${alumno.coderas ? '✓' : '✗'}</td>
-                        <td style="text-align: center;">${alumno.pechera ? '✓' : '✗'}</td>
+                        <td style="text-align: center;">${eq.casco ? '✓' : '✗'}</td>
+                        <td style="text-align: center;">${eq.patines ? '✓' : '✗'}</td>
+                        <td style="text-align: center;">${eq.guantes ? '✓' : '✗'}</td>
+                        <td style="text-align: center;">${eq.palo ? '✓' : '✗'}</td>
+                        <td style="text-align: center;">${eq.pads ? '✓' : '✗'}</td>
+                        <td style="text-align: center;">${eq.pants ? '✓' : '✗'}</td>
+                        <td style="text-align: center;">${eq.coderas ? '✓' : '✗'}</td>
+                        <td style="text-align: center;">${eq.pechera ? '✓' : '✗'}</td>
                         <td>${alumno.nombre_adulto}</td>
                         <td>${alumno.telefono_adulto}</td>
                     </tr>
@@ -612,54 +549,34 @@
 
         // ========== HISTORIAL DE CLASES ==========
 
-        // Cargar historial de clases
         async function loadHistorial() {
             try {
-                // Primero auto-generar clases pendientes de domingos pasados
-                const generated = await autoGeneratePendingClasses();
-                if (generated > 0) {
-                    console.log(`Se generaron automáticamente ${generated} clases pendientes`);
-                }
-
-                // Cargar todas las clases
-                const allClases = await fetchClases();
-
-                // Filtrar solo clases pasadas (fecha menor a hoy)
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-
-                clases = allClases.filter(clase => {
-                    const [year, month, day] = clase.fecha.split('-').map(num => parseInt(num, 10));
-                    const claseDate = new Date(year, month - 1, day);
-                    return claseDate < today;
-                });
-
-                await renderHistorial();
+                historialSesiones = await fetchHistorialClaseSemanal();
+                renderHistorial();
             } catch (error) {
                 showMessage('message', 'error', 'Error cargando historial');
             }
         }
 
-        // Renderizar historial
-        async function renderHistorial() {
+        function renderHistorial() {
             const tbody = document.getElementById('historyTableBody');
 
-            if (clases.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5">No hay clases pasadas registradas</td></tr>';
+            if (historialSesiones.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6">No hay clases pasadas registradas</td></tr>';
                 return;
             }
 
-            const rows = await Promise.all(clases.map(async (clase) => {
-                const asistencias = await fetchClaseAsistencias(clase.id);
+            tbody.innerHTML = historialSesiones.map(sesion => {
+                const asistencias = sesion.asistencias || [];
                 const totalAlumnos = asistencias.length;
                 const asistieron = asistencias.filter(a => a.asistio === true).length;
                 const noAsistieron = asistencias.filter(a => a.asistio === false).length;
-                const pagaron1hs = asistencias.filter(a => a.pago === true).length;
-                const pagaron2hs = asistencias.filter(a => a.pago2 === true).length;
+                const pagaron1hs = asistencias.filter(a => a.pago_tipo === '1hs').length;
+                const pagaron2hs = asistencias.filter(a => a.pago_tipo === '2hs').length;
 
                 return `
                     <tr>
-                        <td>${formatDate(clase.fecha)}</td>
+                        <td>${formatDate(sesion.fecha)}</td>
                         <td>${totalAlumnos}</td>
                         <td><span class="badge badge-success">${asistieron}</span></td>
                         <td><span class="badge badge-danger">${noAsistieron}</span></td>
@@ -668,72 +585,43 @@
                             <span class="badge" style="background:#dbeafe;color:#1e40af;">2hs: ${pagaron2hs}</span>
                         </td>
                         <td>
-                            <button onclick="editClase(${clase.id}, '${clase.fecha}')" class="btn btn-primary" style="width: auto; padding: 0.5rem 1rem; font-size: 0.875rem;">
+                            <button onclick="editClase(${sesion.id}, '${sesion.fecha}')" class="btn btn-primary" style="width: auto; padding: 0.5rem 1rem; font-size: 0.875rem;">
                                 Editar
                             </button>
                         </td>
                     </tr>
                 `;
-            }));
-
-            tbody.innerHTML = rows.join('');
+            }).join('');
         }
 
-        // Generar clase de hoy
-        document.getElementById('btnGenerateToday').addEventListener('click', async () => {
-            const today = new Date().toISOString().split('T')[0];
-
-            // Verificar si ya existe
-            const existingClase = await fetchClaseByFecha(today);
-            if (existingClase) {
-                showMessage('message', 'error', 'Ya existe una clase para el día de hoy');
-                return;
-            }
-
-            try {
-                await generateClaseFromConfirmations(today);
-                showMessage('message', 'success', '¡Clase generada exitosamente!');
-                await loadHistorial();
-            } catch (error) {
-                showMessage('message', 'error', 'Error generando clase');
-            }
-        });
-
-        // Editar clase
-        async function editClase(claseId, fecha) {
-            currentClaseId = claseId;
-            claseAsistencias = await fetchClaseAsistencias(claseId);
-
-            // Obtener confirmaciones de los padres
-            const confirmaciones = await supabaseRequest(`asistencia?select=alumno_dni,presente&fecha=eq.${fecha}`);
+        // Editar clase (modal)
+        async function editClase(sesionId, fecha) {
+            currentSesionIdModal = sesionId;
+            const asistencias = await fetchAsistenciasPorSesion(sesionId);
 
             document.getElementById('modalTitle').textContent = `Clase del ${formatDate(fecha)}`;
 
             const modalBody = document.getElementById('modalTableBody');
 
-            // Obtener todos los alumnos y combinar con asistencias
             const rows = allAlumnos.map(alumno => {
-                const asistencia = claseAsistencias.find(a => a.alumno_dni === alumno.dni);
-                const confirmacion = confirmaciones.find(c => c.alumno_dni === alumno.dni);
+                const a = asistencias.find(x => x.alumno_id === alumno.id);
 
                 let confirmText = '-';
-                if (confirmacion) {
-                    confirmText = confirmacion.presente === 'si' ?
-                        '<span class="badge badge-success">Sí</span>' :
-                        '<span class="badge badge-danger">No</span>';
+                if (a && a.confirmacion_padre !== null && a.confirmacion_padre !== undefined) {
+                    confirmText = a.confirmacion_padre
+                        ? '<span class="badge badge-success">Sí</span>'
+                        : '<span class="badge badge-danger">No</span>';
                 }
 
-                let asistioValue = asistencia ? (asistencia.asistio ? 'true' : 'false') : 'null';
-                let pagoTipo = asistencia
-                    ? (asistencia.pago === true ? '1hs' : asistencia.pago2 === true ? '2hs' : 'null')
-                    : 'null';
+                const asistioValue = a && a.asistio !== null && a.asistio !== undefined ? String(a.asistio) : 'null';
+                const pagoTipo = a && a.pago_tipo ? a.pago_tipo : 'null';
 
                 return `
                     <tr>
                         <td>${alumno.nombre_completo}</td>
                         <td>${confirmText}</td>
                         <td>
-                            <select class="select" data-dni="${alumno.dni}" style="width: auto;">
+                            <select class="select" data-id="${alumno.id}" style="width: auto;">
                                 <option value="null" ${asistioValue === 'null' ? 'selected' : ''}>Sin registrar</option>
                                 <option value="true" ${asistioValue === 'true' ? 'selected' : ''}>✓ Asistió</option>
                                 <option value="false" ${asistioValue === 'false' ? 'selected' : ''}>✗ No asistió</option>
@@ -761,36 +649,35 @@
 
         // Toggle de pago en "Próxima Clase" — guarda inmediatamente en la DB
         async function togglePagoProximaClase(group, tipo) {
-            const alumnoDni = parseInt(group.getAttribute('data-dni'));
+            const alumnoId = parseInt(group.getAttribute('data-id'));
             const current = group.getAttribute('data-pago-tipo');
             const newTipo = current === tipo ? 'null' : tipo;
 
-            // Actualizar UI de inmediato
             group.setAttribute('data-pago-tipo', newTipo);
             group.querySelector('.pago-btn-1hs').classList.toggle('pago-1hs-active', newTipo === '1hs');
             group.querySelector('.pago-btn-2hs').classList.toggle('pago-2hs-active', newTipo === '2hs');
 
-            // Si no existe la clase aún, crearla primero
-            if (!currentSessionClaseId) {
+            // Si nadie confirmó todavía, no existe la sesión: se crea recién ahora
+            if (!currentSessionId) {
                 try {
-                    const clase = await createClase(nextSessionDate);
-                    currentSessionClaseId = clase.id;
+                    const sesion = await obtenerOCrearSesion('clase-semanal');
+                    currentSessionId = sesion.id;
                 } catch (error) {
-                    showMessage('message', 'error', 'Error creando registro de clase');
+                    showMessage('message', 'error', 'Error creando la sesión');
                     return;
                 }
             }
 
-            const pago = newTipo === '1hs' ? true : null;
-            const pago2 = newTipo === '2hs' ? true : null;
             try {
-                await upsertPagoAsistencia(currentSessionClaseId, alumnoDni, pago, pago2);
+                await guardarAsistenciaProfesor(currentSessionId, alumnoId, {
+                    pagoTipo: newTipo === 'null' ? null : newTipo
+                });
             } catch (error) {
                 showMessage('message', 'error', 'Error guardando pago');
             }
         }
 
-        // Alternar estado de pago en modal (1hs / 2hs / sin selección) — mutuamente excluyentes
+        // Alternar estado de pago en el modal (1hs / 2hs / sin selección)
         function togglePago(group, tipo) {
             const current = group.getAttribute('data-pago-tipo');
             const newTipo = current === tipo ? 'null' : tipo;
@@ -799,7 +686,7 @@
             group.querySelector('.pago-btn-2hs').classList.toggle('pago-2hs-active', newTipo === '2hs');
         }
 
-        // Guardar cambios de clase
+        // Guardar cambios de clase (modal)
         document.getElementById('btnSaveClase').addEventListener('click', async () => {
             const rows = document.querySelectorAll('#modalTableBody tr');
 
@@ -808,17 +695,16 @@
                 const pagoGroup = row.querySelector('.pago-group');
                 if (!select || !pagoGroup) return null;
 
-                const dni = parseInt(select.getAttribute('data-dni'));
+                const alumnoId = parseInt(select.getAttribute('data-id'));
                 const asistioValue = select.value;
                 const pagoTipo = pagoGroup.getAttribute('data-pago-tipo');
 
-                const asistio = asistioValue === 'null' ? null : asistioValue === 'true';
-                const pago = pagoTipo === '1hs' ? true : null;
-                const pago2 = pagoTipo === '2hs' ? true : null;
+                if (asistioValue === 'null' && pagoTipo === 'null') return null;
 
-                if (asistio === null && pagoTipo === 'null') return null;
-
-                return upsertClaseAsistencia(currentClaseId, dni, asistio, pago, pago2);
+                return guardarAsistenciaProfesor(currentSesionIdModal, alumnoId, {
+                    asistio: asistioValue === 'null' ? null : asistioValue === 'true',
+                    pagoTipo: pagoTipo === 'null' ? null : pagoTipo
+                });
             }).filter(p => p !== null);
 
             try {
@@ -833,16 +719,11 @@
 
         // Eliminar clase
         document.getElementById('btnDeleteClase').addEventListener('click', async () => {
-            // Confirmar antes de eliminar
             const confirmDelete = confirm('¿Estás seguro de que deseas eliminar esta clase? Esta acción no se puede deshacer.');
-
-            if (!confirmDelete) {
-                return;
-            }
+            if (!confirmDelete) return;
 
             try {
-                const response = await deleteClase(currentClaseId);
-
+                const response = await eliminarSesion(currentSesionIdModal);
                 if (response.ok) {
                     showMessage('message', 'success', 'Clase eliminada exitosamente');
                     document.getElementById('modalEditClase').style.display = 'none';
@@ -855,7 +736,6 @@
             }
         });
 
-        // Cerrar modal
         document.getElementById('btnCloseModal').addEventListener('click', () => {
             document.getElementById('modalEditClase').style.display = 'none';
         });
@@ -864,42 +744,58 @@
             document.getElementById('modalEditClase').style.display = 'none';
         });
 
-        // Cerrar modal al hacer click fuera
         document.getElementById('modalEditClase').addEventListener('click', (e) => {
             if (e.target.id === 'modalEditClase') {
                 document.getElementById('modalEditClase').style.display = 'none';
             }
         });
 
-        // ========== EVENTOS EXTRACURRICULARES ==========
+        // ========== EVENTOS CUSTOM (Torneo, Copa, etc) ==========
+        // Un tab por cada evento activo tipo 'unico' — crear un evento nuevo en la
+        // base alcanza para que aparezca acá, sin tocar este archivo.
 
-        async function renderEventoTable(eventoId, tbodyId) {
-            const tbody = document.getElementById(tbodyId);
-            tbody.innerHTML = '<tr><td colspan="4">Cargando...</td></tr>';
+        const ICONOS_EVENTO = ['🏆', '❄️', '🎽', '🥅', '🏒'];
+
+        async function cargarTabsEventos() {
+            const tabsContainer = document.getElementById('adminTabs');
+            document.querySelectorAll('.admin-tab[data-evento-slug]').forEach(el => el.remove());
 
             try {
-                const confirmaciones = await supabaseRequest(
-                    `evento_asistencia?select=alumno_dni,presente&evento_id=eq.${eventoId}`
-                );
+                const eventos = await fetchEventosActivos();
+                eventos.forEach((evento, i) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'admin-tab';
+                    btn.dataset.eventoSlug = evento.slug;
+                    btn.textContent = `${ICONOS_EVENTO[i % ICONOS_EVENTO.length]} ${evento.nombre}`;
+                    btn.addEventListener('click', () => switchToEvento(evento.slug, evento.nombre, btn));
+                    tabsContainer.appendChild(btn);
+                });
+            } catch (error) {
+                // Sin eventos custom activos: no se agregan tabs extra, el resto del panel sigue andando.
+            }
+        }
 
-                if (eventoId === 'torneo-menores-mayo') torneoData = confirmaciones || [];
-                else if (eventoId === 'copa-fin-mundo-ushuaia-2026') copaData = confirmaciones || [];
-
-                applyEventoFilters(eventoId, tbodyId);
+        async function switchToEvento(slug, nombre, tabEl) {
+            currentEventoSlug = slug;
+            document.getElementById('eventoViewNombre').textContent = nombre;
+            switchTab(tabEl, viewEvento);
+            const tbody = document.getElementById('eventoTableBody');
+            tbody.innerHTML = '<tr><td colspan="4">Cargando...</td></tr>';
+            try {
+                currentEventoConfirmaciones = await fetchConfirmacionesEvento(slug);
+                renderEventoTable();
             } catch (error) {
                 tbody.innerHTML = '<tr><td colspan="4">Error cargando datos</td></tr>';
             }
         }
 
-        function applyEventoFilters(eventoId, tbodyId) {
-            const tbody = document.getElementById(tbodyId);
-            const isTorneo = eventoId === 'torneo-menores-mayo';
-            const data = isTorneo ? torneoData : copaData;
-            const prefix = isTorneo ? 'filterTorneo' : 'filterCopa';
+        function renderEventoTable() {
+            const tbody = document.getElementById('eventoTableBody');
+            const data = currentEventoConfirmaciones || [];
 
-            const ageMinEl = document.getElementById(prefix + 'AgeMin');
-            const ageMaxEl = document.getElementById(prefix + 'AgeMax');
-            const statusEl = document.getElementById(prefix + 'Status');
+            const ageMinEl = document.getElementById('filterEventoAgeMin');
+            const ageMaxEl = document.getElementById('filterEventoAgeMax');
+            const statusEl = document.getElementById('filterEventoStatus');
             const ageMin = ageMinEl && ageMinEl.value !== '' ? parseInt(ageMinEl.value) : null;
             const ageMax = ageMaxEl && ageMaxEl.value !== '' ? parseInt(ageMaxEl.value) : null;
             const statusFilter = statusEl ? statusEl.value : '';
@@ -910,14 +806,11 @@
             }
 
             const filtered = data.filter(conf => {
-                const alumno = allAlumnos.find(a => a.dni === conf.alumno_dni);
-                const age = alumno ? calculateAge(alumno.fecha_nac) : null;
+                const age = conf.alumnos ? calculateAge(conf.alumnos.fecha_nacimiento) : null;
                 if (ageMin !== null && (age === null || age < ageMin)) return false;
                 if (ageMax !== null && (age === null || age > ageMax)) return false;
-                if (statusFilter) {
-                    if (statusFilter === 'si' && conf.presente !== 'si') return false;
-                    if (statusFilter === 'no' && conf.presente !== 'no') return false;
-                }
+                if (statusFilter === 'si' && conf.confirmacion_padre !== true) return false;
+                if (statusFilter === 'no' && conf.confirmacion_padre !== false) return false;
                 return true;
             });
 
@@ -927,13 +820,14 @@
             }
 
             tbody.innerHTML = filtered.map(conf => {
-                const alumno = allAlumnos.find(a => a.dni === conf.alumno_dni);
-                const nombre = alumno ? alumno.nombre_completo : `DNI ${conf.alumno_dni}`;
-                const edad = alumno ? (calculateAge(alumno.fecha_nac) || '-') : '-';
-                const club = alumno?.clubes?.nombre || '-';
-                const badge = conf.presente === 'si'
+                const nombre = conf.alumnos ? conf.alumnos.nombre_completo : '-';
+                const edad = conf.alumnos ? (calculateAge(conf.alumnos.fecha_nacimiento) || '-') : '-';
+                const club = conf.alumnos?.clubes?.nombre || '-';
+                const badge = conf.confirmacion_padre === true
                     ? '<span class="badge badge-success">Asiste</span>'
-                    : '<span class="badge badge-danger">No Asiste</span>';
+                    : conf.confirmacion_padre === false
+                        ? '<span class="badge badge-danger">No Asiste</span>'
+                        : '<span class="badge badge-warning">Sin confirmar</span>';
 
                 return `
                     <tr>

@@ -106,7 +106,7 @@
 
                     <div class="form-group">
                         <label class="label">Teléfono *</label>
-                        <input type="number" id="telefono_adulto" name="telefono_adulto" class="input" required>
+                        <input type="tel" id="telefono_adulto" name="telefono_adulto" class="input" placeholder="+54 9 ..." required>
                     </div>
                 </div>
 
@@ -127,7 +127,7 @@
         // Cargar clubes al iniciar
         async function loadClubes() {
             try {
-                const clubes = await fetchClubes();
+                const clubes = await fetchClubesPublico();
                 clubSelect.innerHTML = '<option value="">-- Selecciona un club --</option>';
                 clubes.forEach(club => {
                     const option = document.createElement('option');
@@ -144,6 +144,8 @@
         // Cargar clubes al cargar la página
         loadClubes();
 
+        const EQUIPAMIENTO_KEYS = ['casco', 'patines', 'guantes', 'palo', 'pads', 'pants', 'coderas', 'pechera'];
+
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -158,33 +160,28 @@
 
             try {
                 const clubValue = document.getElementById('club').value;
-                const formData = {
-                    dni: parseInt(document.getElementById('dni').value),
-                    nombre_completo: document.getElementById('nombre_completo').value,
-                    fecha_nac: document.getElementById('fecha_nac').value,
-                    club_id: clubValue ? parseInt(clubValue) : null,
-                    casco: document.getElementById('casco').checked,
-                    patines: document.getElementById('patines').checked,
-                    guantes: document.getElementById('guantes').checked,
-                    palo: document.getElementById('palo').checked,
-                    pads: document.getElementById('pads').checked,
-                    pants: document.getElementById('pants').checked,
-                    coderas: document.getElementById('coderas').checked,
-                    pechera: document.getElementById('pechera').checked,
-                    nombre_adulto: document.getElementById('nombre_adulto').value,
-                    telefono_adulto: parseInt(document.getElementById('telefono_adulto').value)
-                };
+                const equipamiento = {};
+                EQUIPAMIENTO_KEYS.forEach(key => {
+                    equipamiento[key] = document.getElementById(key).checked;
+                });
 
-                const response = await supabaseRequest('alumnos', 'POST', formData);
+                await registrarAlumno({
+                    p_dni: parseInt(document.getElementById('dni').value),
+                    p_nombre_completo: document.getElementById('nombre_completo').value,
+                    p_fecha_nacimiento: document.getElementById('fecha_nac').value,
+                    p_club_id: clubValue ? parseInt(clubValue) : null,
+                    p_equipamiento: equipamiento,
+                    p_nombre_adulto: document.getElementById('nombre_adulto').value,
+                    p_telefono_adulto: document.getElementById('telefono_adulto').value
+                });
 
-                if (response.ok) {
-                    showMessage('message', 'success', '¡Alumno registrado exitosamente!');
-                    form.reset();
-                } else {
-                    showMessage('message', 'error', 'Error al registrar. Verifica que el DNI no esté duplicado.');
-                }
+                showMessage('message', 'success', '¡Alumno registrado exitosamente!');
+                form.reset();
             } catch (error) {
-                showMessage('message', 'error', 'Error de conexión con el servidor');
+                const duplicado = /duplicate key|unique constraint/i.test(error.message || '');
+                showMessage('message', 'error', duplicado
+                    ? 'Ya existe un alumno registrado con ese DNI.'
+                    : 'Error al registrar. Intentá de nuevo.');
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Registrar Alumno';

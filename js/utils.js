@@ -24,67 +24,14 @@ function showMessage(elementId, type, text) {
 }
 
 /**
- * Calcula el próximo sábado desde hoy
- * @returns {string} Fecha en formato ISO (YYYY-MM-DD)
- */
-function getNextSaturday() {
-    const today = new Date();
-    const dayOfWeek = today.getDay();
-    const daysUntilSaturday = (6 - dayOfWeek + 7) % 7 || 7;
-    const nextSat = new Date(today);
-    nextSat.setDate(today.getDate() + daysUntilSaturday);
-    return nextSat.toISOString().split('T')[0];
-}
-
-/**
- * Calcula el próximo domingo desde hoy
- * Hasta las 20:00 del domingo, se mantiene el domingo actual
- * Después de las 20:00 del domingo, se considera el próximo domingo
- * @returns {string} Fecha en formato ISO (YYYY-MM-DD)
- */
-function getNextSunday() {
-    // Usar fecha local sin conversión UTC
-    const now = new Date();
-    const dayOfWeek = now.getDay(); // 0 = Domingo, 1 = Lunes, ..., 6 = Sábado
-    const hour = now.getHours();
-
-    let daysUntilSunday;
-    
-    if (dayOfWeek === 0) {
-        // Si hoy es domingo
-        if (hour < 20) {
-            // Antes de las 20:00, el domingo actual es la clase
-            daysUntilSunday = 0;
-        } else {
-            // Después de las 20:00, el próximo domingo es en 7 días
-            daysUntilSunday = 7;
-        }
-    } else {
-        // Para cualquier otro día, calcular días restantes hasta domingo
-        daysUntilSunday = 7 - dayOfWeek;
-    }
-
-    const nextSun = new Date(now);
-    nextSun.setHours(0, 0, 0, 0);
-    nextSun.setDate(now.getDate() + daysUntilSunday);
-
-    // Formatear manualmente para evitar problemas de zona horaria
-    const year = nextSun.getFullYear();
-    const month = String(nextSun.getMonth() + 1).padStart(2, '0');
-    const day = String(nextSun.getDate()).padStart(2, '0');
-
-    return `${year}-${month}-${day}`;
-}
-
-/**
- * Formatea una fecha en formato legible en español
+ * Formatea una fecha (YYYY-MM-DD) en formato legible en español
  * @param {string} dateString - Fecha en formato ISO (YYYY-MM-DD)
  * @returns {string} Fecha formateada
  */
 function formatDate(dateString) {
+    if (!dateString) return '-';
     // Parsear manualmente para evitar problemas de zona horaria
     const [year, month, day] = dateString.split('-').map(num => parseInt(num, 10));
-    // Crear fecha en zona horaria local (month - 1 porque los meses empiezan en 0)
     const date = new Date(year, month - 1, day);
 
     return date.toLocaleDateString('es-ES', {
@@ -98,298 +45,13 @@ function formatDate(dateString) {
 /**
  * Calcula la edad a partir de una fecha de nacimiento
  * @param {string} birthDate - Fecha de nacimiento en formato ISO
- * @returns {number} Edad en años
+ * @returns {number|null} Edad en años
  */
 function calculateAge(birthDate) {
     if (!birthDate) return null;
     const birth = new Date(birthDate);
     const today = new Date();
-    const age = Math.floor((today - birth) / (1000 * 60 * 60 * 24 * 365.25));
-    return age;
-}
-
-/**
- * Realiza una petición a Supabase
- * @param {string} endpoint - Endpoint de la API
- * @param {string} method - Método HTTP (GET, POST, etc.)
- * @param {object} body - Cuerpo de la petición (opcional)
- * @returns {Promise} Promesa con la respuesta
- */
-async function supabaseRequest(endpoint, method = 'GET', body = null) {
-    const options = {
-        method: method,
-        headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json'
-        }
-    };
-
-    if (body && method !== 'GET') {
-        options.headers['Prefer'] = 'return=minimal';
-        options.body = JSON.stringify(body);
-    }
-
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/${endpoint}`, options);
-
-    if (method === 'GET' || !options.headers['Prefer']) {
-        return await response.json();
-    }
-
-    return response;
-}
-
-/**
- * Obtiene todos los clubes ordenados por nombre
- * @returns {Promise<Array>} Array de clubes
- */
-async function fetchClubes() {
-    return await supabaseRequest('clubes?select=id,nombre&order=nombre.asc');
-}
-
-/**
- * Obtiene todos los alumnos ordenados por nombre con información del club
- * @returns {Promise<Array>} Array de alumnos
- */
-async function fetchAlumnos() {
-    return await supabaseRequest('alumnos?select=dni,nombre_completo,fecha_nac,club_id,clubes(nombre),casco,patines,guantes,palo,pads,pants,coderas,pechera,nombre_adulto,telefono_adulto&order=nombre_completo.asc');
-}
-
-/**
- * Calcula el resumen de equipación de un alumno
- * @param {object} alumno - Objeto alumno con campos de equipación
- * @returns {string} Texto con resumen de equipación (ej: "5/8")
- */
-function getEquipmentSummary(alumno) {
-    const equipmentFields = ['casco', 'patines', 'guantes', 'palo', 'pads', 'pants', 'coderas', 'pechera'];
-    const total = equipmentFields.length;
-    const count = equipmentFields.filter(field => alumno[field]).length;
-    return `${count}/${total}`;
-}
-
-/**
- * Genera tooltip con detalle de equipación
- * @param {object} alumno - Objeto alumno con campos de equipación
- * @returns {string} HTML del tooltip
- */
-function getEquipmentDetail(alumno) {
-    const equipment = {
-        'Casco': alumno.casco,
-        'Patines': alumno.patines,
-        'Guantes': alumno.guantes,
-        'Palo': alumno.palo,
-        'Pads': alumno.pads,
-        'Pants': alumno.pants,
-        'Coderas': alumno.coderas,
-        'Pechera': alumno.pechera
-    };
-
-    return Object.entries(equipment)
-        .map(([name, has]) => `${name}: ${has ? '✓' : '✗'}`)
-        .join('\n');
-}
-
-/**
- * Obtiene todas las clases ordenadas por fecha descendente
- * @returns {Promise<Array>} Array de clases
- */
-async function fetchClases() {
-    return await supabaseRequest('clases?select=*&order=fecha.desc');
-}
-
-/**
- * Obtiene una clase específica por fecha
- * @param {string} fecha - Fecha en formato ISO
- * @returns {Promise<Object|null>} Clase o null si no existe
- */
-async function fetchClaseByFecha(fecha) {
-    const clases = await supabaseRequest(`clases?select=*&fecha=eq.${fecha}`);
-    return clases.length > 0 ? clases[0] : null;
-}
-
-/**
- * Crea una nueva clase
- * @param {string} fecha - Fecha en formato ISO
- * @returns {Promise<Object>} Clase creada
- */
-async function createClase(fecha) {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/clases`, {
-        method: 'POST',
-        headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'return=representation'
-        },
-        body: JSON.stringify({ fecha })
-    });
-    const data = await response.json();
-    return data[0];
-}
-
-/**
- * Obtiene las asistencias de una clase específica
- * @param {number} claseId - ID de la clase
- * @returns {Promise<Array>} Array de asistencias con datos del alumno
- */
-async function fetchClaseAsistencias(claseId) {
-    return await supabaseRequest(`clase_asistencias?select=*,alumnos(dni,nombre_completo,fecha_nac,clubes(nombre))&clase_id=eq.${claseId}`);
-}
-
-/**
- * Actualiza solo los campos pago/pago2 de un registro en clase_asistencias (sin tocar asistio)
- * @param {number} claseId - ID de la clase
- * @param {number} alumnoDni - DNI del alumno
- * @param {boolean|null} pago - Pagó 1hs (true) o no (null)
- * @param {boolean|null} pago2 - Pagó 2hs (true) o no (null)
- * @returns {Promise<Response>} Respuesta de la petición
- */
-async function upsertPagoAsistencia(claseId, alumnoDni, pago, pago2) {
-    return await fetch(`${SUPABASE_URL}/rest/v1/clase_asistencias`, {
-        method: 'POST',
-        headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'resolution=merge-duplicates,return=minimal'
-        },
-        body: JSON.stringify({
-            clase_id: claseId,
-            alumno_dni: alumnoDni,
-            pago: pago,
-            pago2: pago2
-        })
-    });
-}
-
-/**
- * Crea o actualiza la asistencia de un alumno en una clase
- * @param {number} claseId - ID de la clase
- * @param {number} alumnoDni - DNI del alumno
- * @param {boolean} asistio - Si asistió o no
- * @param {boolean|null} pago - Pagó 1hs (true) o no (null)
- * @param {boolean|null} pago2 - Pagó 2hs (true) o no (null)
- * @returns {Promise<Response>} Respuesta de la petición
- */
-async function upsertClaseAsistencia(claseId, alumnoDni, asistio, pago, pago2) {
-    return await fetch(`${SUPABASE_URL}/rest/v1/clase_asistencias`, {
-        method: 'POST',
-        headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'resolution=merge-duplicates,return=minimal'
-        },
-        body: JSON.stringify({
-            clase_id: claseId,
-            alumno_dni: alumnoDni,
-            asistio: asistio,
-            pago: pago,
-            pago2: pago2
-        })
-    });
-}
-
-/**
- * Genera una clase automáticamente desde las confirmaciones de los padres
- * @param {string} fecha - Fecha en formato ISO
- * @returns {Promise<Object>} Clase creada con asistencias
- */
-async function generateClaseFromConfirmations(fecha) {
-    // Crear la clase
-    const clase = await createClase(fecha);
-
-    // Obtener todas las confirmaciones de los padres para esa fecha
-    const confirmaciones = await supabaseRequest(`asistencia?select=alumno_dni,presente&fecha=eq.${fecha}`);
-
-    // Obtener todos los alumnos
-    const todosAlumnos = await fetchAlumnos();
-
-    // Crear asistencias basadas en las confirmaciones
-    const asistenciasPromises = todosAlumnos.map(async (alumno) => {
-        const confirmacion = confirmaciones.find(c => c.alumno_dni === alumno.dni);
-        let asistio = null; // null = sin confirmar
-
-        if (confirmacion) {
-            asistio = confirmacion.presente === 'si';
-        }
-
-        // Solo crear registro si hay confirmación (si o no)
-        if (asistio !== null) {
-            return upsertClaseAsistencia(clase.id, alumno.dni, asistio);
-        }
-    });
-
-    await Promise.all(asistenciasPromises.filter(p => p !== undefined));
-
-    return clase;
-}
-
-/**
- * Elimina una clase y todas sus asistencias asociadas
- * @param {number} claseId - ID de la clase a eliminar
- * @returns {Promise<Response>} Respuesta de la petición
- */
-async function deleteClase(claseId) {
-    return await fetch(`${SUPABASE_URL}/rest/v1/clases?id=eq.${claseId}`, {
-        method: 'DELETE',
-        headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json'
-        }
-    });
-}
-
-/**
- * Obtiene todos los domingos pasados que tienen confirmaciones pero no tienen clase generada
- * @returns {Promise<Array>} Array de fechas en formato ISO
- */
-async function getPendingSundaysWithConfirmations() {
-    try {
-        // Obtener todas las confirmaciones de domingos pasados
-        const today = new Date().toISOString().split('T')[0];
-        const allConfirmations = await supabaseRequest(`asistencia?select=fecha&fecha=lt.${today}&order=fecha.desc`);
-
-        // Obtener fechas únicas de confirmaciones
-        const uniqueDates = [...new Set(allConfirmations.map(c => c.fecha))];
-
-        // Obtener todas las clases existentes
-        const existingClasses = await fetchClases();
-        const existingDates = new Set(existingClasses.map(c => c.fecha));
-
-        // Filtrar solo fechas que NO tienen clase generada
-        const pendingDates = uniqueDates.filter(date => !existingDates.has(date));
-
-        return pendingDates;
-    } catch (error) {
-        console.error('Error obteniendo domingos pendientes:', error);
-        return [];
-    }
-}
-
-/**
- * Genera automáticamente todas las clases pendientes de domingos pasados
- * @returns {Promise<number>} Cantidad de clases generadas
- */
-async function autoGeneratePendingClasses() {
-    const pendingDates = await getPendingSundaysWithConfirmations();
-
-    if (pendingDates.length === 0) {
-        return 0;
-    }
-
-    let generated = 0;
-    for (const fecha of pendingDates) {
-        try {
-            await generateClaseFromConfirmations(fecha);
-            generated++;
-        } catch (error) {
-            console.error(`Error generando clase para ${fecha}:`, error);
-        }
-    }
-
-    return generated;
+    return Math.floor((today - birth) / (1000 * 60 * 60 * 24 * 365.25));
 }
 
 /**
@@ -407,4 +69,284 @@ function validateForm(form) {
         }
     }
     return true;
+}
+
+// ============================================================
+// Sesión de profesor (JWT devuelto por login_profesor)
+// ============================================================
+
+const PROFESOR_TOKEN_KEY = 'profesorJwt';
+const PROFESOR_NOMBRE_KEY = 'profesorNombre';
+
+function getProfesorToken() {
+    return sessionStorage.getItem(PROFESOR_TOKEN_KEY);
+}
+
+function getProfesorNombre() {
+    return sessionStorage.getItem(PROFESOR_NOMBRE_KEY) || '';
+}
+
+function isProfesorLoggedIn() {
+    return !!getProfesorToken();
+}
+
+function clearProfesorSession() {
+    sessionStorage.removeItem(PROFESOR_TOKEN_KEY);
+    sessionStorage.removeItem(PROFESOR_NOMBRE_KEY);
+}
+
+/**
+ * Decodifica el payload de un JWT (sin validar la firma; solo para leer
+ * el nombre a mostrar, la validación real la hace Postgres en cada request).
+ */
+function decodeJwtPayload(token) {
+    try {
+        const payload = token.split('.')[1];
+        const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+        return JSON.parse(atob(base64));
+    } catch {
+        return {};
+    }
+}
+
+/**
+ * Login de profesor: llama a login_profesor() y guarda el JWT devuelto
+ * para el resto de la sesión del navegador (se pierde al cerrar la pestaña).
+ */
+async function loginProfesor(username, password) {
+    const token = await callRpc('login_profesor', { p_username: username, p_password: password });
+    sessionStorage.setItem(PROFESOR_TOKEN_KEY, token);
+    sessionStorage.setItem(PROFESOR_NOMBRE_KEY, decodeJwtPayload(token).nombre || username);
+    return token;
+}
+
+function logoutProfesor() {
+    clearProfesorSession();
+}
+
+// ============================================================
+// Cliente REST a Supabase (PostgREST)
+// ============================================================
+
+function authHeaders() {
+    const token = getProfesorToken() || SUPABASE_ANON_KEY;
+    return {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+    };
+}
+
+/**
+ * Llama a una función Postgres expuesta como RPC (rpc_*, login_profesor,
+ * obtener_o_crear_sesion). Usa el JWT de profesor si hay uno guardado, si
+ * no la anon key — varias funciones (rpc_registrar_alumno,
+ * rpc_confirmar_asistencia, etc) están pensadas para llamarse sin login.
+ * @throws {Error} con el mensaje que devuelve Postgres si la llamada falla
+ */
+async function callRpc(fnName, params = {}) {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fnName}`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify(params)
+    });
+
+    if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.message || `Error llamando a ${fnName}`);
+    }
+
+    const text = await response.text();
+    return text ? JSON.parse(text) : null;
+}
+
+/**
+ * Lee una tabla directo por REST. Requiere estar logueado como profesor:
+ * las policies de RLS bloquean la lectura sin el JWT (ver
+ * supabase/migrations/0003_rls.sql), así que sin login esto devuelve
+ * 401/403 con cero filas.
+ */
+async function selectTable(query) {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/${query}`, {
+        headers: authHeaders()
+    });
+    if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.message || 'Error leyendo datos');
+    }
+    return await response.json();
+}
+
+/**
+ * Inserta o actualiza (upsert) directo contra una tabla, resolviendo
+ * conflictos por `onConflict` (columnas de una UNIQUE constraint — si no
+ * coincide con la primary key, PostgREST necesita que se lo indiquemos
+ * explícito con ?on_conflict=, si no intenta un INSERT plano y el upsert
+ * falla con 409 duplicate key). Solo funciona logueado como profesor.
+ */
+async function upsertTable(table, body, onConflict) {
+    const query = onConflict ? `${table}?on_conflict=${onConflict}` : table;
+    return await fetch(`${SUPABASE_URL}/rest/v1/${query}`, {
+        method: 'POST',
+        headers: {
+            ...authHeaders(),
+            'Prefer': 'resolution=merge-duplicates,return=minimal'
+        },
+        body: JSON.stringify(body)
+    });
+}
+
+async function deleteFromTable(query) {
+    return await fetch(`${SUPABASE_URL}/rest/v1/${query}`, {
+        method: 'DELETE',
+        headers: authHeaders()
+    });
+}
+
+// ============================================================
+// Equipación (alumnos.equipamiento es jsonb: {"casco": true, ...})
+// ============================================================
+
+const EQUIPAMIENTO_ITEMS = [
+    { key: 'casco', label: 'Casco' },
+    { key: 'patines', label: 'Patines' },
+    { key: 'guantes', label: 'Guantes' },
+    { key: 'palo', label: 'Palo' },
+    { key: 'pads', label: 'Pads' },
+    { key: 'pants', label: 'Pants' },
+    { key: 'coderas', label: 'Coderas' },
+    { key: 'pechera', label: 'Pechera' }
+];
+
+/**
+ * @param {object} equipamiento - alumno.equipamiento (jsonb)
+ * @returns {string} resumen ej. "5/8"
+ */
+function getEquipmentSummary(equipamiento) {
+    const total = EQUIPAMIENTO_ITEMS.length;
+    const count = EQUIPAMIENTO_ITEMS.filter(item => equipamiento && equipamiento[item.key]).length;
+    return `${count}/${total}`;
+}
+
+/**
+ * @param {object} equipamiento - alumno.equipamiento (jsonb)
+ * @returns {string} texto para el tooltip
+ */
+function getEquipmentDetail(equipamiento) {
+    return EQUIPAMIENTO_ITEMS
+        .map(item => `${item.label}: ${equipamiento && equipamiento[item.key] ? '✓' : '✗'}`)
+        .join('\n');
+}
+
+// ============================================================
+// Alumnos y clubes
+// ============================================================
+
+/** Lectura pública (sin login): solo id + nombre. Para el buscador. */
+async function fetchAlumnosPublico() {
+    return await callRpc('rpc_listar_alumnos_publico');
+}
+
+/** Lectura pública (sin login): solo id + nombre. Para el <select> de club. */
+async function fetchClubesPublico() {
+    return await callRpc('rpc_listar_clubes');
+}
+
+/** Alta libre de alumno, sin login. */
+async function registrarAlumno(data) {
+    return await callRpc('rpc_registrar_alumno', data);
+}
+
+/** Lectura completa de alumnos (DNI, teléfono, equipación). Requiere login. */
+async function fetchAlumnosCompleto() {
+    return await selectTable(
+        'alumnos?select=id,dni,nombre_completo,fecha_nacimiento,club_id,clubes(nombre),equipamiento,nombre_adulto,telefono_adulto&order=nombre_completo.asc'
+    );
+}
+
+// ============================================================
+// Eventos (recurrente = clase semanal, único = torneo/copa/etc)
+// ============================================================
+
+/** Eventos custom activos (tipo 'unico'), para las nav cards de index.html. */
+async function fetchEventosActivos() {
+    return await callRpc('rpc_listar_eventos_activos');
+}
+
+/** Datos públicos de un evento por slug (nombre real, en vez de hardcodearlo en la URL). */
+async function fetchEvento(slug) {
+    const eventos = await callRpc('rpc_obtener_evento', { p_slug: slug });
+    return eventos && eventos.length > 0 ? eventos[0] : null;
+}
+
+/** Próxima fecha de un evento, sin crear la sesión (solo lectura). */
+async function fetchProximaFecha(slug) {
+    return await callRpc('rpc_proxima_fecha_evento', { p_evento_slug: slug });
+}
+
+/** Confirmación libre de un padre (sin login) para un evento (recurrente o único). */
+async function confirmarAsistencia(alumnoId, eventoSlug, presente) {
+    return await callRpc('rpc_confirmar_asistencia', {
+        p_alumno_id: alumnoId,
+        p_evento_slug: eventoSlug,
+        p_presente: presente
+    });
+}
+
+/**
+ * Obtiene (o crea si nadie confirmó todavía) la sesión vigente de un
+ * evento. La usa el panel de profesor para poder cargar pago/asistencia
+ * aunque ningún padre haya confirmado nada.
+ * @returns {Promise<{id: number, fecha: string}>}
+ */
+async function obtenerOCrearSesion(eventoSlug) {
+    const rows = await callRpc('obtener_o_crear_sesion', { p_evento_slug: eventoSlug });
+    return rows && rows.length > 0 ? rows[0] : null;
+}
+
+/** Busca una sesión ya creada de un evento para una fecha puntual (no la crea). Requiere login. */
+async function fetchSesionPorFecha(eventoSlug, fecha) {
+    const rows = await selectTable(
+        `sesiones?select=id,fecha,eventos!inner(slug)&eventos.slug=eq.${encodeURIComponent(eventoSlug)}&fecha=eq.${fecha}`
+    );
+    return rows && rows.length > 0 ? rows[0] : null;
+}
+
+/** Sesiones pasadas de la clase semanal, con sus asistencias embebidas (para el historial). Requiere login. */
+async function fetchHistorialClaseSemanal() {
+    const hoy = new Date().toISOString().split('T')[0];
+    return await selectTable(
+        `sesiones?select=id,fecha,eventos!inner(slug),asistencias(asistio,pago_tipo)&eventos.slug=eq.clase-semanal&fecha=lt.${hoy}&order=fecha.desc`
+    );
+}
+
+/** Asistencias (confirmación + asistio + pago) de una sesión puntual, con el nombre del alumno. Requiere login. */
+async function fetchAsistenciasPorSesion(sesionId) {
+    return await selectTable(
+        `asistencias?select=*,alumnos(id,nombre_completo,fecha_nacimiento,clubes(nombre))&sesion_id=eq.${sesionId}`
+    );
+}
+
+/** Confirmaciones de un evento único (torneo, copa, etc), con datos del alumno. Requiere login. */
+async function fetchConfirmacionesEvento(eventoSlug) {
+    return await selectTable(
+        `asistencias?select=confirmacion_padre,alumnos(nombre_completo,fecha_nacimiento,clubes(nombre)),sesiones!inner(eventos!inner(slug))&sesiones.eventos.slug=eq.${encodeURIComponent(eventoSlug)}`
+    );
+}
+
+/**
+ * El profesor carga/edita asistio y/o pago_tipo de un alumno en una
+ * sesión. Upsert: si no existía la fila (nadie había confirmado), la crea
+ * sin tocar confirmacion_padre (queda null = nadie confirmó).
+ */
+async function guardarAsistenciaProfesor(sesionId, alumnoId, { asistio, pagoTipo } = {}) {
+    const body = { sesion_id: sesionId, alumno_id: alumnoId, registrado_at: new Date().toISOString() };
+    if (asistio !== undefined) body.asistio = asistio;
+    if (pagoTipo !== undefined) body.pago_tipo = pagoTipo;
+    return await upsertTable('asistencias', body, 'sesion_id,alumno_id');
+}
+
+/** Borra una sesión (y en cascada sus asistencias). Requiere login. */
+async function eliminarSesion(sesionId) {
+    return await deleteFromTable(`sesiones?id=eq.${sesionId}`);
 }

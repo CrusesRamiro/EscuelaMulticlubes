@@ -42,7 +42,7 @@
                 <datalist id="alumnosList">
                 </datalist>
                 <p id="alumnosCount" class="info-text" style="margin-top:0.5rem;">Cargando alumnos...</p>
-                <input type="hidden" id="alumnoDNI">
+                <input type="hidden" id="alumnoId">
             </div>
 
             <div class="grid-2 space-y">
@@ -72,21 +72,25 @@
         let alumnosData = [];
         const alumnoInput = document.getElementById('alumnoInput');
         const alumnosList = document.getElementById('alumnosList');
-        const alumnoDNI = document.getElementById('alumnoDNI');
+        const alumnoId = document.getElementById('alumnoId');
         const btnAsiste = document.getElementById('btnAsiste');
         const btnNoAsiste = document.getElementById('btnNoAsiste');
 
         // Cargar datos al iniciar
         async function init() {
-            nextSessionDate = getNextSunday();
-            document.getElementById('nextSessionDate').textContent = formatDate(nextSessionDate);
+            try {
+                nextSessionDate = await fetchProximaFecha('clase-semanal');
+                document.getElementById('nextSessionDate').textContent = formatDate(nextSessionDate);
+            } catch (error) {
+                document.getElementById('nextSessionDate').textContent = 'No disponible';
+            }
             await loadAlumnos();
         }
 
         // Cargar lista de alumnos
         async function loadAlumnos() {
             try {
-                alumnosData = await fetchAlumnos();
+                alumnosData = await fetchAlumnosPublico();
                 console.log('Alumnos cargados:', alumnosData ? alumnosData.length : 0);
                 updateDatalist(alumnosData);
                 const countEl = document.getElementById('alumnosCount');
@@ -105,8 +109,8 @@
             if (!alumnos || alumnos.length === 0) return;
             alumnos.forEach(alumno => {
                 const option = document.createElement('option');
-                option.value = alumno.nombre_completo || alumno.nombre || '';
-                option.setAttribute('data-dni', alumno.dni || alumno.dni_alumno || '');
+                option.value = alumno.nombre_completo;
+                option.setAttribute('data-id', alumno.id);
                 alumnosList.appendChild(option);
             });
         }
@@ -115,10 +119,10 @@
         alumnoInput.addEventListener('input', () => {
             const inputValue = alumnoInput.value;
             // Intentar encontrar por datos cargados
-            const selectedAlumno = alumnosData.find(a => (a.nombre_completo || a.nombre) === inputValue);
+            const selectedAlumno = alumnosData.find(a => a.nombre_completo === inputValue);
 
             if (selectedAlumno) {
-                alumnoDNI.value = selectedAlumno.dni || selectedAlumno.dni_alumno || '';
+                alumnoId.value = selectedAlumno.id;
                 btnAsiste.disabled = false;
                 btnNoAsiste.disabled = false;
                 return;
@@ -126,14 +130,14 @@
 
             // Fallback: buscar en las opciones del datalist (por si el nombre viene formateado diferente)
             const opt = Array.from(alumnosList.options).find(o => o.value === inputValue);
-            if (opt && opt.dataset && opt.dataset.dni) {
-                alumnoDNI.value = opt.dataset.dni;
+            if (opt && opt.dataset && opt.dataset.id) {
+                alumnoId.value = opt.dataset.id;
                 btnAsiste.disabled = false;
                 btnNoAsiste.disabled = false;
                 return;
             }
 
-            alumnoDNI.value = '';
+            alumnoId.value = '';
             btnAsiste.disabled = true;
             btnNoAsiste.disabled = true;
         });
@@ -141,7 +145,7 @@
         // Limpiar input al hacer blur si no hay selección válida
         alumnoInput.addEventListener('blur', () => {
             setTimeout(() => {
-                if (!alumnoDNI.value) {
+                if (!alumnoId.value) {
                     alumnoInput.value = '';
                 }
             }, 200);
@@ -149,9 +153,7 @@
 
         // Manejar asistencia
         async function handleAttendance(presente) {
-            const alumno_dni = parseInt(alumnoDNI.value);
-
-            if (!alumno_dni) {
+            if (!alumnoId.value) {
                 showMessage('message', 'error', 'Por favor selecciona un alumno');
                 return;
             }
@@ -161,34 +163,22 @@
             btnNoAsiste.disabled = true;
 
             try {
-                const data = {
-                    alumno_dni: alumno_dni,
-                    fecha: nextSessionDate,
-                    presente: presente
-                };
-
-                const response = await supabaseRequest('asistencia', 'POST', data);
-
-                if (response.ok) {
-                    showMessage('message', 'success',
-                        `Asistencia registrada: ${presente === 'si' ? 'Asistirá' : 'No asistirá'}`);
-                    alumnoInput.value = '';
-                    alumnoDNI.value = '';
-                } else {
-                    showMessage('message', 'error',
-                        'Error al registrar. Puede que ya hayas confirmado asistencia para esta fecha.');
-                }
+                await confirmarAsistencia(parseInt(alumnoId.value), 'clase-semanal', presente);
+                showMessage('message', 'success',
+                    `Asistencia registrada: ${presente ? 'Asistirá' : 'No asistirá'}`);
+                alumnoInput.value = '';
+                alumnoId.value = '';
             } catch (error) {
-                showMessage('message', 'error', 'Error de conexión con el servidor');
+                showMessage('message', 'error', 'Error al registrar. Intentá de nuevo.');
             } finally {
-                btnAsiste.disabled = !alumnoDNI.value;
-                btnNoAsiste.disabled = !alumnoDNI.value;
+                btnAsiste.disabled = !alumnoId.value;
+                btnNoAsiste.disabled = !alumnoId.value;
             }
         }
 
         // Event listeners para botones
-        btnAsiste.addEventListener('click', () => handleAttendance('si'));
-        btnNoAsiste.addEventListener('click', () => handleAttendance('no'));
+        btnAsiste.addEventListener('click', () => handleAttendance(true));
+        btnNoAsiste.addEventListener('click', () => handleAttendance(false));
 
         // Inicializar
         init();
