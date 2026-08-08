@@ -36,13 +36,61 @@ as $$
 $$;
 
 -- ============================================================
+-- rpc_proxima_fecha_evento: solo lectura, sin efecto secundario — para que
+-- asistencia.html/evento.html puedan mostrar "Próxima sesión: <fecha>" sin
+-- crear una fila en sesiones solo por cargar la página (una sesión recién
+-- se crea cuando alguien efectivamente confirma, vía obtener_o_crear_sesion
+-- más abajo).
+-- ============================================================
+create or replace function rpc_proxima_fecha_evento(p_evento_slug text)
+returns date
+language sql
+security definer
+stable
+set search_path = public
+as $$
+    select case
+        when e.tipo = 'recurrente' then calcular_proxima_sesion(e.dia_semana, e.hora_limite_confirmacion)
+        else e.fecha_unica
+    end
+    from eventos e
+    where e.slug = p_evento_slug and e.activo = true;
+$$;
+
+revoke all on function rpc_proxima_fecha_evento(text) from public;
+grant execute on function rpc_proxima_fecha_evento(text) to anon, authenticated;
+
+-- ============================================================
+-- rpc_listar_eventos_activos: eventos tipo 'unico' activos, para que
+-- index.html arme las nav cards de eventos custom (Torneo, Copa, etc) sin
+-- tenerlos hardcodeados — un evento nuevo pasa a ser un INSERT, no un
+-- deploy. La clase semanal recurrente no aparece acá porque index.html ya
+-- tiene su propia nav card fija a asistencia.html.
+-- ============================================================
+create or replace function rpc_listar_eventos_activos()
+returns table (slug text, nombre text)
+language sql
+security definer
+stable
+set search_path = public
+as $$
+    select slug, nombre from eventos where tipo = 'unico' and activo = true order by created_at asc;
+$$;
+
+revoke all on function rpc_listar_eventos_activos() from public;
+grant execute on function rpc_listar_eventos_activos() to anon, authenticated;
+
+-- ============================================================
 -- obtener_o_crear_sesion: reemplaza fetchClaseByFecha + createClase +
 -- toda la lógica de "próximo domingo" repetida en el frontend.
 -- Sirve tanto para el evento recurrente (clase semanal) como para eventos
--- únicos (torneo, copa, etc: usan eventos.fecha_unica).
+-- únicos (torneo, copa, etc: usan eventos.fecha_unica). Devuelve también
+-- la fecha para que el caller no tenga que volver a calcularla.
 -- ============================================================
-create or replace function obtener_o_crear_sesion(p_evento_slug text)
-returns bigint
+drop function if exists obtener_o_crear_sesion(text);
+
+create function obtener_o_crear_sesion(p_evento_slug text)
+returns table (id bigint, fecha date)
 language plpgsql
 security definer
 set search_path = public
@@ -63,16 +111,16 @@ begin
         v_fecha := coalesce(v_evento.fecha_unica, current_date);
     end if;
 
-    select id into v_sesion_id from sesiones where evento_id = v_evento.id and fecha = v_fecha;
+    select s.id into v_sesion_id from sesiones s where s.evento_id = v_evento.id and s.fecha = v_fecha;
 
     if v_sesion_id is null then
         insert into sesiones (evento_id, fecha)
         values (v_evento.id, v_fecha)
         on conflict (evento_id, fecha) do update set fecha = excluded.fecha
-        returning id into v_sesion_id;
+        returning sesiones.id into v_sesion_id;
     end if;
 
-    return v_sesion_id;
+    return query select v_sesion_id, v_fecha;
 end;
 $$;
 
@@ -180,7 +228,7 @@ as $$
 declare
     v_sesion_id bigint;
 begin
-    v_sesion_id := obtener_o_crear_sesion(p_evento_slug);
+    select s.id into v_sesion_id from obtener_o_crear_sesion(p_evento_slug) s;
 
     insert into asistencias (sesion_id, alumno_id, confirmacion_padre, confirmado_at)
     values (v_sesion_id, p_alumno_id, p_presente, now())
