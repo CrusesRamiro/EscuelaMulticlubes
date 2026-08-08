@@ -90,7 +90,16 @@
                 <button id="tabHistory" class="admin-tab" data-view="viewHistory">Historial</button>
                 <button id="tabAll" class="admin-tab" data-view="viewAll">Todos los Alumnos</button>
                 <!-- Los tabs de eventos custom (Torneo, Copa, etc) se agregan acá en runtime,
-                     uno por cada fila activa en la tabla eventos — ver cargarTabsEventos(). -->
+                     uno por cada evento en la tabla eventos — ver cargarTabsEventos(). -->
+                <button id="btnNuevoEvento" class="admin-tab" style="border-style: dashed;" type="button">+ Nuevo evento</button>
+            </div>
+
+            <!-- Form para crear un evento custom (torneo, copa, etc) -->
+            <div id="formNuevoEvento" style="display:none; gap:0.75rem; align-items:center; flex-wrap:wrap; margin-bottom:1rem; padding:0.75rem; background:#f9fafb; border-radius:0.5rem;">
+                <input type="text" id="nuevoEventoNombre" class="input" placeholder="Nombre del evento" style="width:auto; flex:1; min-width:12rem;">
+                <input type="date" id="nuevoEventoFecha" class="input" style="width:auto;">
+                <button id="btnCrearEvento" class="btn btn-primary" style="width:auto;" type="button">Crear</button>
+                <button id="btnCancelarEvento" class="btn" style="width:auto; background:#6b7280; color:white;" type="button">Cancelar</button>
             </div>
 
             <!-- Próxima Clase View -->
@@ -240,8 +249,14 @@
             <!-- Evento custom (Torneo, Copa, etc) View — genérica, reutilizada para
                  cualquier evento tipo 'unico'. Ver cargarTabsEventos()/switchToEvento(). -->
             <div id="viewEvento" class="admin-view" style="display: none;">
-                <div class="info-box">
-                    <p class="info-text">Confirmaciones para: <strong id="eventoViewNombre"></strong></p>
+                <div class="info-box" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+                    <p class="info-text">
+                        Confirmaciones para: <strong id="eventoViewNombre"></strong>
+                        <span id="eventoViewFecha" style="color:#6b7280;"></span>
+                    </p>
+                    <button id="btnEliminarEvento" class="btn btn-danger" style="width: auto; padding: 0.4rem 0.75rem; font-size: 0.8rem;" type="button">
+                        Eliminar evento
+                    </button>
                 </div>
                 <div style="display:flex; gap:0.75rem; align-items:center; margin-bottom:0.75rem; flex-wrap:wrap; padding:0.25rem 0;">
                     <div style="display:flex; align-items:center; gap:0.4rem;">
@@ -751,43 +766,109 @@
         });
 
         // ========== EVENTOS CUSTOM (Torneo, Copa, etc) ==========
-        // Un tab por cada evento activo tipo 'unico' — crear un evento nuevo en la
-        // base alcanza para que aparezca acá, sin tocar este archivo.
+        // Un tab por cada evento tipo 'unico' — crear uno nuevo (botón "+ Nuevo
+        // evento") alcanza para que aparezca acá y en index.html, sin tocar este
+        // archivo. A diferencia de index.html, acá se listan TAMBIÉN los vencidos
+        // (fecha_unica pasada) para poder revisarlos o borrarlos a mano.
 
         const ICONOS_EVENTO = ['🏆', '❄️', '🎽', '🥅', '🏒'];
+        let currentEventoId = null;
 
         async function cargarTabsEventos() {
             const tabsContainer = document.getElementById('adminTabs');
+            const btnNuevo = document.getElementById('btnNuevoEvento');
             document.querySelectorAll('.admin-tab[data-evento-slug]').forEach(el => el.remove());
 
             try {
-                const eventos = await fetchEventosActivos();
+                const hoy = new Date().toISOString().split('T')[0];
+                const eventos = await fetchEventosAdmin();
                 eventos.forEach((evento, i) => {
+                    const vencido = evento.fecha_unica && evento.fecha_unica < hoy;
                     const btn = document.createElement('button');
                     btn.className = 'admin-tab';
                     btn.dataset.eventoSlug = evento.slug;
-                    btn.textContent = `${ICONOS_EVENTO[i % ICONOS_EVENTO.length]} ${evento.nombre}`;
-                    btn.addEventListener('click', () => switchToEvento(evento.slug, evento.nombre, btn));
-                    tabsContainer.appendChild(btn);
+                    btn.textContent = `${ICONOS_EVENTO[i % ICONOS_EVENTO.length]} ${evento.nombre}${vencido ? ' (vencido)' : ''}`;
+                    btn.addEventListener('click', () => switchToEvento(evento, btn));
+                    tabsContainer.insertBefore(btn, btnNuevo);
                 });
             } catch (error) {
-                // Sin eventos custom activos: no se agregan tabs extra, el resto del panel sigue andando.
+                // Sin eventos custom: no se agregan tabs extra, el resto del panel sigue andando.
             }
         }
 
-        async function switchToEvento(slug, nombre, tabEl) {
-            currentEventoSlug = slug;
-            document.getElementById('eventoViewNombre').textContent = nombre;
+        async function switchToEvento(evento, tabEl) {
+            currentEventoSlug = evento.slug;
+            currentEventoId = evento.id;
+            document.getElementById('eventoViewNombre').textContent = evento.nombre;
+            document.getElementById('eventoViewFecha').textContent = evento.fecha_unica ? `(${formatDate(evento.fecha_unica)})` : '';
             switchTab(tabEl, viewEvento);
             const tbody = document.getElementById('eventoTableBody');
             tbody.innerHTML = '<tr><td colspan="4">Cargando...</td></tr>';
             try {
-                currentEventoConfirmaciones = await fetchConfirmacionesEvento(slug);
+                currentEventoConfirmaciones = await fetchConfirmacionesEvento(evento.slug);
                 renderEventoTable();
             } catch (error) {
                 tbody.innerHTML = '<tr><td colspan="4">Error cargando datos</td></tr>';
             }
         }
+
+        // Crear evento custom
+        const btnNuevoEvento = document.getElementById('btnNuevoEvento');
+        const formNuevoEvento = document.getElementById('formNuevoEvento');
+
+        btnNuevoEvento.addEventListener('click', () => {
+            formNuevoEvento.style.display = formNuevoEvento.style.display === 'none' ? 'flex' : 'none';
+        });
+
+        document.getElementById('btnCancelarEvento').addEventListener('click', () => {
+            formNuevoEvento.style.display = 'none';
+            document.getElementById('nuevoEventoNombre').value = '';
+            document.getElementById('nuevoEventoFecha').value = '';
+        });
+
+        document.getElementById('btnCrearEvento').addEventListener('click', async () => {
+            const nombre = document.getElementById('nuevoEventoNombre').value.trim();
+            const fecha = document.getElementById('nuevoEventoFecha').value;
+
+            if (!nombre) {
+                showMessage('message', 'error', 'Poné un nombre para el evento');
+                return;
+            }
+
+            try {
+                const response = await crearEventoCustom(nombre, fecha || null);
+                if (response.ok) {
+                    showMessage('message', 'success', 'Evento creado exitosamente');
+                    formNuevoEvento.style.display = 'none';
+                    document.getElementById('nuevoEventoNombre').value = '';
+                    document.getElementById('nuevoEventoFecha').value = '';
+                    await cargarTabsEventos();
+                } else {
+                    showMessage('message', 'error', 'Error al crear el evento');
+                }
+            } catch (error) {
+                showMessage('message', 'error', 'Error de conexión al crear el evento');
+            }
+        });
+
+        // Borrar evento custom (cascada a sus sesiones/asistencias)
+        document.getElementById('btnEliminarEvento').addEventListener('click', async () => {
+            const confirmDelete = confirm('¿Eliminar este evento? Se van a borrar también todas sus confirmaciones. Esta acción no se puede deshacer.');
+            if (!confirmDelete || !currentEventoId) return;
+
+            try {
+                const response = await eliminarEvento(currentEventoId);
+                if (response.ok) {
+                    showMessage('message', 'success', 'Evento eliminado exitosamente');
+                    switchTab(tabAttendance, viewAttendance);
+                    await cargarTabsEventos();
+                } else {
+                    showMessage('message', 'error', 'Error al eliminar el evento');
+                }
+            } catch (error) {
+                showMessage('message', 'error', 'Error de conexión al eliminar el evento');
+            }
+        });
 
         function renderEventoTable() {
             const tbody = document.getElementById('eventoTableBody');

@@ -268,9 +268,35 @@ async function fetchAlumnosCompleto() {
 // Eventos (recurrente = clase semanal, único = torneo/copa/etc)
 // ============================================================
 
-/** Eventos custom activos (tipo 'unico'), para las nav cards de index.html. */
+/** Eventos custom activos y no vencidos (tipo 'unico'), para las nav cards de index.html. */
 async function fetchEventosActivos() {
     return await callRpc('rpc_listar_eventos_activos');
+}
+
+/**
+ * Todos los eventos custom (tipo 'unico'), incluidos los vencidos — para
+ * el panel de profesor: un evento vencido deja de mostrarse en index.html
+ * pero el profesor lo sigue viendo (y puede borrarlo) hasta que decida
+ * hacerlo. Requiere login.
+ */
+async function fetchEventosAdmin() {
+    return await selectTable(
+        'eventos?select=id,slug,nombre,fecha_unica&tipo=eq.unico&order=fecha_unica.desc.nullslast,created_at.desc'
+    );
+}
+
+/** Crea un evento custom (tipo 'unico'). El slug lo genera la base a partir del nombre. Requiere login. */
+async function crearEventoCustom(nombre, fechaUnica) {
+    return await fetch(`${SUPABASE_URL}/rest/v1/eventos`, {
+        method: 'POST',
+        headers: { ...authHeaders(), Prefer: 'return=representation' },
+        body: JSON.stringify({ nombre, fecha_unica: fechaUnica || null, tipo: 'unico' })
+    });
+}
+
+/** Borra un evento custom (y en cascada sus sesiones/asistencias). Requiere login. */
+async function eliminarEvento(eventoId) {
+    return await deleteFromTable(`eventos?id=eq.${eventoId}`);
 }
 
 /** Datos públicos de un evento por slug (nombre real, en vez de hardcodearlo en la URL). */

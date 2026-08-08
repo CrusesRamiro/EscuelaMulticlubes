@@ -31,7 +31,9 @@ linkeado por CLI):
 3. **Setear el JWT secret** (ver abajo) — sin esto `login_profesor` no
    funciona.
 4. `migrations/0003_rls.sql` — RLS y grants.
-5. (opcional, solo test) `seed.sql` — un club, el evento de clase semanal y
+5. `migrations/0004_gestion_eventos.sql` — slug automático + alta/baja de
+   eventos custom desde el panel de profesor + vencimiento por fecha.
+6. (opcional, solo test) `seed.sql` — un club, el evento de clase semanal y
    un profesor de prueba.
 
 ## Paso manual: JWT secret
@@ -85,33 +87,46 @@ values ('nombre_usuario', crypt('la-contraseña', gen_salt('bf')), 'Nombre Apell
 | `clase_asistencias` (asistencia real + pago, clase semanal) | `asistencias.asistio` + `asistencias.pago_tipo` |
 | `evento_asistencia` (confirmación padre, eventos custom) | `asistencias.confirmacion_padre` (misma tabla que la clase semanal) |
 
-## Qué llama el frontend a partir de acá (próximo paso, no incluido todavía)
+## Qué llama el frontend (ya implementado, ver `js/utils.js`)
 
 Sin login (`anon`), todo vía `POST /rest/v1/rpc/<función>`:
 
-- `rpc_registrar_alumno` — reemplaza el `POST /alumnos` de `registro.html`.
-- `rpc_listar_clubes` — reemplaza el `GET /clubes` del `<select>` de
-  `registro.html`.
-- `rpc_listar_alumnos_publico` — reemplaza el `GET /alumnos` que arma el
-  datalist en `asistencia.html`/`evento.html` (ahora devuelve solo
-  id+nombre, no todo el registro del alumno).
-- `rpc_obtener_evento` — para que `evento.html` muestre el nombre real del
-  evento en vez del que viene hardcodeado en el query string.
-- `rpc_confirmar_asistencia` — reemplaza el `POST /asistencia` y
-  `POST /evento_asistencia`.
+- `rpc_registrar_alumno` — alta libre de alumno (`registro.html`).
+- `rpc_listar_clubes` — `<select>` de club (`registro.html`).
+- `rpc_listar_alumnos_publico` — datalist de `asistencia.html`/`evento.html`
+  (solo id+nombre, no todo el registro del alumno).
+- `rpc_listar_eventos_activos` — eventos custom activos y no vencidos, para
+  las nav cards de `index.html`.
+- `rpc_obtener_evento` — nombre real de un evento por slug (`evento.html`);
+  también devuelve vacío si el evento ya venció.
+- `rpc_proxima_fecha_evento` — fecha de la próxima sesión sin crearla (solo
+  lectura, para mostrar "Próxima sesión: X").
+- `rpc_confirmar_asistencia` — confirmación de un padre, para la clase
+  semanal o cualquier evento custom (upsert: puede corregir su respuesta).
 
-Con login (`authenticated`, JWT de `login_profesor`):
+Con login (`authenticated`, JWT de `login_profesor`, guardado en
+`sessionStorage` y mandado como `Authorization: Bearer <jwt>` en vez de la
+anon key sola):
 
-- Login: `POST /rest/v1/rpc/login_profesor` con `{username, password}` →
-  devuelve el JWT. Guardarlo (ej. `sessionStorage`) y mandarlo como
-  `Authorization: Bearer <jwt>` en el resto de los requests de
-  `profesores.html` (en vez de la anon key sola).
-- Todo lo que hoy lee `profesores.html` (`alumnos`, `sesiones`,
-  `asistencias`, `eventos`) pasa a requerir ese header — sin él, RLS
-  devuelve 0 filas.
-- Marcar `asistio`/`pago_tipo` y borrar una clase: `INSERT`/`UPDATE`/
-  `DELETE` directo contra `asistencias`/`sesiones` (permitido por las
-  policies de `authenticated` en `0003_rls.sql`), igual que hoy.
+- Login: `POST /rest/v1/rpc/login_profesor` con `{p_username, p_password}`.
+- Lectura de `alumnos`, `sesiones`, `asistencias`, `eventos`, `clubes`
+  directo por REST — sin el JWT, RLS devuelve 0 filas.
+- Marcar `asistio`/`pago_tipo` (`asistencias`) y borrar una clase
+  (`sesiones`): `INSERT`/`UPDATE`/`DELETE` directo, con `?on_conflict=` en
+  el upsert de `asistencias` porque su UNIQUE no es la primary key.
+- **Gestión de eventos custom** (panel de profesor, botón "+ Nuevo
+  evento"): `INSERT` directo en `eventos` (`tipo` siempre `'unico'`; el
+  `slug` lo genera un trigger a partir del nombre, no hace falta mandarlo)
+  y `DELETE` directo por `id` (borra en cascada sus sesiones/asistencias).
+  Las policies de `0004_gestion_eventos.sql` acotan ambas operaciones a
+  `tipo = 'unico'` — no se puede tocar por acá el evento recurrente
+  `clase-semanal` aunque alguien mande el id a mano.
+- El panel de profesor lista **todos** los eventos custom (`fetchEventosAdmin`,
+  `eventos?select=...` directo), vencidos incluidos, para poder revisarlos
+  o borrarlos — `rpc_listar_eventos_activos` (público) en cambio los oculta
+  apenas pasa la fecha. Ninguna de las dos cosas borra la fila: el
+  vencimiento es solo visual/de listado, borrar sigue siendo una acción
+  manual del profesor.
 
 Esta parte (reescribir `js/utils.js` y los 5 HTML) queda para cuando
 confirmemos que el esquema funciona en test — es un cambio separado a
